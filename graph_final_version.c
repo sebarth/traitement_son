@@ -53,7 +53,7 @@ void init_sdl(){
 
 double signal(double t){
     //x(t), the signal
-    return (double) sinf(2 * M_PI * t / (SAMPLE_COUNT / 2));
+    return sin(2 * M_PI * t / (SAMPLE_COUNT / 2));
 }
 
 void updateData(updateArgs args){
@@ -76,8 +76,8 @@ void loop(loopArgs args){
     if (!*(args.quit2)){
         //update all boundaries to fit
         pthread_mutex_lock(&rendererLock);
-        (args.boundaries1)->xInterval.max = dataMax(args.data, SAMPLE_COUNT);
-        (args.boundaries1)->xInterval.min = dataMin(args.data, SAMPLE_COUNT); 
+        (args.boundaries1)->yInterval.max = dataMax(args.data, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.min = dataMin(args.data, SAMPLE_COUNT); 
 
         SDL_SetRenderDrawColor(renderer1, 225, 225, 225, 255);
         SDL_RenderClear(renderer1);
