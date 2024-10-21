@@ -2,11 +2,13 @@
 #include <SDL2/SDL_ttf.h> //texts
 #include <math.h>
 #include <stdlib.h>
-#include <complex.h>
+#include <fftw3.h>
 #include <pthread.h>
 #include <unistd.h>
 #include "graphs.h"
-#include "fft.h"
+
+const int SAMPLE_COUNT = 1024;
+const int RATE = 1000;
 
 SDL_Window* window1;
 SDL_Window* window2;
@@ -16,12 +18,16 @@ SDL_Renderer* renderer2;
 
 TTF_Font* font;
 
-
+typedef struct {
+    double *samples;
+    int maxFrameIndex;
+    int currentIndex;
+} AudioData;
 typedef struct{
     graphBoundaries* boundaries1;
     graphBoundaries* boundaries2;
-    double* data;
-    double complex* fft_data;
+    AudioData* data;
+    fftw_complex* fft_data;
     double* spectrum;
     int* t;
     int* quit1;
@@ -29,9 +35,9 @@ typedef struct{
     pthread_mutex_t* globalDataLock;
 } loopArgs;
 typedef struct{
-    double* data; 
+    AudioData* data; 
     int* t;
-    double complex* fft_data;
+    fftw_complex* fft_data;
     double* spectrum;
     int* quit1;
     int* quit2;
@@ -52,36 +58,41 @@ void init_sdl(){
 
 double signal(double t){
     //x(t), the signal
-    return sin(2 * M_PI * t / (SAMPLE_COUNT / 2));
+    return sin(2 * M_PI * t / 250) + 1.75 * sin(2 * M_PI * t / 150);
 }
 
 void updateData(updateArgs args){
-    double temp = args.data[0];
+    //update data variable
     for (int i = 0; i < SAMPLE_COUNT; i++) {
-        args.data[i] = signal(i + *(args.t));
-        args.fft_data[i] = args.data[i] + 0*I;
+        ((*(args.data)).samples)[i] = signal(i + *(args.t));
     }
-    args.data[SAMPLE_COUNT - 1] = signal(SAMPLE_COUNT - 1 + *(args.t));
-    fft(args.fft_data, SAMPLE_COUNT, LOG2_SAMPLE_COUNT);
+    //update fft_data
+    fftw_plan plan;
+    plan = fftw_plan_dft_r2c_1d(SAMPLE_COUNT, (*(args.data)).samples, args.fft_data, FFTW_ESTIMATE);
+    fftw_execute(plan);
+
+    //update spectrum
     for (int i = 0; i < SAMPLE_COUNT; i++){
-        args.spectrum[i] = cabs(args.fft_data[i]);
+        args.spectrum[i] = sqrt(args.fft_data[i][0] * args.fft_data[i][0] + args.fft_data[i][1] * args.fft_data[i][1]);
     }
+
+    //update t (only for now generating data)
     *(args.t) += 1;
-    *(args.t) %= 8 * SAMPLE_COUNT;
+    *(args.t) %= 750;
 }
 
 void loop(loopArgs args){
     // !!!!!! /!\ LOOPING /!\ !!!!!!
     if (window1){
         //update all boundaries to fit the graph
-        (args.boundaries1)->yInterval.max = dataMax(args.data, SAMPLE_COUNT);
-        (args.boundaries1)->yInterval.min = dataMin(args.data, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.max = dataMax((*(args.data)).samples, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.min = dataMin((*(args.data)).samples, SAMPLE_COUNT);
 
-        SDL_SetRenderDrawColor(renderer1, 225, 225, 225, 255);
+        SDL_SetRenderDrawColor(renderer1, 255, 255, 255, 255);
         SDL_RenderClear(renderer1);
 
         SDL_SetRenderDrawColor(renderer1, 255, 0, 0, 255);
-        drawGraph(renderer1, args.data, SAMPLE_COUNT, *(args.boundaries1), font);
+        drawGraph(renderer1, (*(args.data)).samples, SAMPLE_COUNT, *(args.boundaries1), font);
 
         SDL_RenderPresent(renderer1);
     }
@@ -89,10 +100,10 @@ void loop(loopArgs args){
         //update yInterval's max value to fit (min is always 0 so don't update min)
         (args.boundaries2)->yInterval.max = dataMax(args.spectrum, SAMPLE_COUNT / 2 + 1);
 
-        SDL_SetRenderDrawColor(renderer2, 225, 225, 225, 255);
+        SDL_SetRenderDrawColor(renderer2, 255, 255, 255, 255);
         SDL_RenderClear(renderer2);
 
-        SDL_SetRenderDrawColor(renderer2, 255, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer2, 0, 0, 255, 255);
         drawGraph(renderer2, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), font);
 
         SDL_RenderPresent(renderer2);
@@ -107,7 +118,7 @@ void* updateDataPtr(void* update_args){
         updateData(args);
         pthread_mutex_unlock(args.globalDataLock);
 
-        usleep(5000);
+        usleep(1000000 / RATE);
     }
     return NULL;
 }
@@ -141,14 +152,15 @@ int main() {
     yInterval2.min = 0.0;
     graphBoundaries boundaries2 = {xInterval2, yInterval2};
 
-    double *data = malloc(SAMPLE_COUNT * sizeof(double));
-    if (data == NULL) printf("data");
+    AudioData data;
+    data.maxFrameIndex = SAMPLE_COUNT; // 5 secs
+    data.samples = (double*)malloc(sizeof(double) * data.maxFrameIndex);
+    data.currentIndex = 0;
+
     int t = 0;
 
-    double complex *fft_data = malloc(SAMPLE_COUNT * sizeof(double complex));
-    if (fft_data == NULL) printf("fft_data");
+    fftw_complex *fft_data = malloc(SAMPLE_COUNT * sizeof(fftw_complex));
     double *spectrum = malloc(SAMPLE_COUNT * sizeof(double));
-    if (spectrum == NULL) printf("spectrum");
 
     int quit1 = 0; // so that you stop updating the 1st window
     int quit2 = 0; // same for 2nd
@@ -159,8 +171,8 @@ int main() {
     pthread_mutex_init(&globalDataLock, NULL);
     
 
-    loopArgs loop_args = {&boundaries1, &boundaries2, data, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
-    updateArgs update_args = {data, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock};
+    loopArgs loop_args = {&boundaries1, &boundaries2, &data, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
+    updateArgs update_args = {&data, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock};
 
     pthread_t updateThread;
 
@@ -198,7 +210,7 @@ int main() {
 
     pthread_mutex_destroy(&globalDataLock);
 
-    free(data);
+    free(data.samples);
     free(fft_data);
     free(spectrum);
     if (renderer1) SDL_DestroyRenderer(renderer1);
@@ -230,5 +242,98 @@ He just said he wanted to
         _|   |_
      This is also Bob. 
   He just read this code.
+
+    |^^^^^^^^^^^^^^|
+    |.____.||.____.|
+   <|\.___.||.___./|>
+    | \.__.||.__./ |
+   <|  \._.||._./  |>
+    |   \..||../   |
+   <|    \.||./    |>
+    |     \||/     |
+   <|=====|°°|=====|>
+    |-----/..\-----|
+   <|====/.__.\====|>
+    |---/.____.\---|
+   <|==/.______.\==|>
+    |-/.________.\-|
+   <|/.__________.\|>
+    |.____________.|
+
+
+THE FINAL FIGHT - SDL_RENDERING vs MULTI_THREADING
+
+
+HERE IS YOUR ARMY :
+    ___  
+  .|ç-ç|.
+   |___|
+    | |
+    ___  
+  .|è-è|.
+   |___|
+    | |
+    ___  
+  .|#-#|.  
+   |___|
+    | |
+    ___  
+  .|@-@|.  
+   |___|
+    | |
+    ___  
+  .|*_*|.  
+   |___|
+    | |
+    ___  
+  .|~_~|.  
+   |___|
+    | |
+    ___  
+  .|°-°|.  
+   |___|
+    | |
+    ___  
+  .|=_=|.  
+   |___|
+    | |
+    ___  
+  .|µ-µ|.  
+   |___|
+    | |
+    ___  
+  .|;-;|.  
+   |___|
+    | |
+    ___  
+  .|»-»|.
+   |___|
+    | |
+
+HERE'S THE BOSS :
+
+            \   .________________.   /
+             \  |                |  /
+              \ |   (°)    (°)   | /
+               \|   (°)    (°)   |/
+            \  /|   (°)    (°)   |\  /
+             \/ |   (°)    (°)   | \/
+             /\ |                | /\
+            /  \|                |/  \
+               /|                |\
+              / .________________. \
+             /                      \
+            /                        \
+                    THE CPYDER 
+            (not spyder cuz it's in C lol)
+
+TIP1 : NOTE THAT SDL RENDERING ONLY WORKS ON THE MAIN THREAD ._.
+TIP2 : THAT's ALL...........................
+                                  
+
+
+
+
+
 
 */
