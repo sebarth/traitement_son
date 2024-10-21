@@ -16,7 +16,6 @@ SDL_Renderer* renderer2;
 
 TTF_Font* font;
 
-pthread_mutex_t rendererLock;
 
 typedef struct{
     graphBoundaries* boundaries1;
@@ -73,11 +72,10 @@ void updateData(updateArgs args){
 
 void loop(loopArgs args){
     // !!!!!! /!\ LOOPING /!\ !!!!!!
-    if (!*(args.quit1)){
-        //update all boundaries to fit
-        pthread_mutex_lock(&rendererLock);
+    if (window1){
+        //update all boundaries to fit the graph
         (args.boundaries1)->yInterval.max = dataMax(args.data, SAMPLE_COUNT);
-        (args.boundaries1)->yInterval.min = dataMin(args.data, SAMPLE_COUNT); 
+        (args.boundaries1)->yInterval.min = dataMin(args.data, SAMPLE_COUNT);
 
         SDL_SetRenderDrawColor(renderer1, 225, 225, 225, 255);
         SDL_RenderClear(renderer1);
@@ -86,13 +84,10 @@ void loop(loopArgs args){
         drawGraph(renderer1, args.data, SAMPLE_COUNT, *(args.boundaries1), font);
 
         SDL_RenderPresent(renderer1);
-        pthread_mutex_unlock(&rendererLock);
     }
-    if (!*(args.quit2)){
-        pthread_mutex_lock(&rendererLock);
+    if (window2){
         //update yInterval's max value to fit (min is always 0 so don't update min)
-        (args.boundaries2)->yInterval.max = dataMax(args.spectrum, SAMPLE_COUNT);
-
+        (args.boundaries2)->yInterval.max = dataMax(args.spectrum, SAMPLE_COUNT / 2 + 1);
 
         SDL_SetRenderDrawColor(renderer2, 225, 225, 225, 255);
         SDL_RenderClear(renderer2);
@@ -101,7 +96,6 @@ void loop(loopArgs args){
         drawGraph(renderer2, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), font);
 
         SDL_RenderPresent(renderer2);
-        pthread_mutex_unlock(&rendererLock);
     }
 }
 
@@ -113,7 +107,7 @@ void* updateDataPtr(void* update_args){
         updateData(args);
         pthread_mutex_unlock(args.globalDataLock);
 
-        usleep(25000);
+        usleep(5000);
     }
     printf("exiting update\n");
     return NULL;
@@ -121,10 +115,12 @@ void* updateDataPtr(void* update_args){
 
 void* loopPtr(void* loop_args){
     loopArgs args = *(loopArgs*)loop_args;
+
     while (!*(args.quit1) || !*(args.quit2)){
         pthread_mutex_lock(args.globalDataLock);
         loop(args);
         pthread_mutex_unlock(args.globalDataLock);
+
         usleep(1000000 / 60); // Update at ~60 frames per second
     }
     printf("exiting loop\n");
@@ -176,7 +172,6 @@ int main() {
     pthread_mutex_t globalDataLock;
 
     pthread_mutex_init(&globalDataLock, NULL);
-    pthread_mutex_init(&rendererLock, NULL);
     
 
     loopArgs loop_args = {&boundaries1, &boundaries2, data, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
@@ -197,15 +192,11 @@ int main() {
             }
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE) {
                 if (event.window.windowID == SDL_GetWindowID(window1)) {
-                    SDL_DestroyRenderer(renderer1);
-                    renderer1 = NULL;
                     SDL_DestroyWindow(window1);
                     window1 = NULL;
                     quit1 = 1;
                 }
                 if (event.window.windowID == SDL_GetWindowID(window2)) {
-                    SDL_DestroyRenderer(renderer2);
-                    renderer2 = NULL;
                     SDL_DestroyWindow(window2);
                     window2 = NULL;
                     quit2 = 1;
@@ -215,14 +206,13 @@ int main() {
         SDL_Delay(10);  // Small delay to reduce CPU usage
     } 
 
-    printf("I'm outta there");
+    printf("I'm outta there\n");
 
     pthread_join(loopThread, NULL);
     pthread_join(updateThread, NULL);
     printf("Yup, made it to line 207\n");
 
     pthread_mutex_destroy(&globalDataLock);
-    pthread_mutex_destroy(&rendererLock);
     printf("Yup, made it to line 210\n");
 
     free(data);
