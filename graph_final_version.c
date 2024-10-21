@@ -73,7 +73,7 @@ void updateData(updateArgs args){
 
 void loop(loopArgs args){
     // !!!!!! /!\ LOOPING /!\ !!!!!!
-    if (!*(args.quit2)){
+    if (!*(args.quit1)){
         //update all boundaries to fit
         pthread_mutex_lock(&rendererLock);
         (args.boundaries1)->yInterval.max = dataMax(args.data, SAMPLE_COUNT);
@@ -169,13 +169,12 @@ int main() {
     double *spectrum = malloc(SAMPLE_COUNT * sizeof(double));
     if (spectrum == NULL) printf("spectrum");
 
-    int quit1 = 0;
-    int quit2 = 0;
+    int quit1 = 0; // so that you stop updating the 1st window
+    int quit2 = 0; // same for 2nd
     SDL_Event event;
 
     pthread_mutex_t globalDataLock;
 
-    //initialise le mutex
     pthread_mutex_init(&globalDataLock, NULL);
     pthread_mutex_init(&rendererLock, NULL);
     
