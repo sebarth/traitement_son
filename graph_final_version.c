@@ -109,21 +109,6 @@ void* updateDataPtr(void* update_args){
 
         usleep(5000);
     }
-    printf("exiting update\n");
-    return NULL;
-}
-
-void* loopPtr(void* loop_args){
-    loopArgs args = *(loopArgs*)loop_args;
-
-    while (!*(args.quit1) || !*(args.quit2)){
-        pthread_mutex_lock(args.globalDataLock);
-        loop(args);
-        pthread_mutex_unlock(args.globalDataLock);
-
-        usleep(1000000 / 60); // Update at ~60 frames per second
-    }
-    printf("exiting loop\n");
     return NULL;
 }
 
@@ -177,11 +162,9 @@ int main() {
     loopArgs loop_args = {&boundaries1, &boundaries2, data, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
     updateArgs update_args = {data, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock};
 
-    pthread_t loopThread, updateThread;
+    pthread_t updateThread;
 
-    pthread_create(&loopThread, NULL, loopPtr, &loop_args);
     pthread_create(&updateThread, NULL, updateDataPtr, &update_args);
-
 
     while (!quit1 || !quit2) {
         // Event handling
@@ -203,17 +186,17 @@ int main() {
                 }
             }
         }
-        SDL_Delay(10);  // Small delay to reduce CPU usage
+        pthread_mutex_lock(&globalDataLock);
+        loop(loop_args);
+        pthread_mutex_unlock(&globalDataLock);
+
+        usleep(1000000 / 60); // Update at ~60 frames per second
     } 
 
-    printf("I'm outta there\n");
 
-    pthread_join(loopThread, NULL);
     pthread_join(updateThread, NULL);
-    printf("Yup, made it to line 207\n");
 
     pthread_mutex_destroy(&globalDataLock);
-    printf("Yup, made it to line 210\n");
 
     free(data);
     free(fft_data);
@@ -222,9 +205,7 @@ int main() {
     if (renderer2) SDL_DestroyRenderer(renderer2);
     if (window1) SDL_DestroyWindow(window1);
     if (window2) SDL_DestroyWindow(window2);
-    printf("I made it 'til the end...\n");
     SDL_Quit();
-    printf("did I ?\n");
     return 0;
 }
 
