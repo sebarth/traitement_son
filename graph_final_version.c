@@ -5,10 +5,12 @@
 #include <fftw3.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 #include "graphs.h"
 
-const int SAMPLE_COUNT = 1024;
-const int RATE = 1000;
+const int SAMPLE_COUNT = 4096;
+const int RATE = 600;
+const int FRAMES_PER_BUFFER = 1;
 
 SDL_Window* window1;
 SDL_Window* window2;
@@ -19,14 +21,15 @@ SDL_Renderer* renderer2;
 TTF_Font* font;
 
 typedef struct {
-    double *samples;
-    int maxFrameIndex;
-    int currentIndex;
+    double *samples;   //the data
+    int maxFrameIndex; //total number of indexes
+    int currentIndex;  //next index to update
 } AudioData;
 typedef struct{
     graphBoundaries* boundaries1;
     graphBoundaries* boundaries2;
     AudioData* data;
+    double* orderedData;
     fftw_complex* fft_data;
     double* spectrum;
     int* t;
@@ -35,7 +38,8 @@ typedef struct{
     pthread_mutex_t* globalDataLock;
 } loopArgs;
 typedef struct{
-    AudioData* data; 
+    AudioData* data;
+    double* orderedData;
     int* t;
     fftw_complex* fft_data;
     double* spectrum;
@@ -58,41 +62,57 @@ void init_sdl(){
 
 double signal(double t){
     //x(t), the signal
-    return sin(2 * M_PI * t / 250) + 1.75 * sin(2 * M_PI * t / 150);
+    return sin(2 * M_PI * t / 1500);
 }
 
-void updateData(updateArgs args){
-    //update data variable
-    for (int i = 0; i < SAMPLE_COUNT; i++) {
-        ((*(args.data)).samples)[i] = signal(i + *(args.t));
+void orderData(AudioData data, double* orderedData){
+    if (data.currentIndex == data.maxFrameIndex - 1) {
+        // if current index is max index, copy the whole table bc already ordered
+        memcpy(orderedData, data.samples, data.maxFrameIndex * sizeof(double));
+    } else{
+        // else, copy first the last values (least recent)
+        memcpy(orderedData, data.samples + data.currentIndex, (data.maxFrameIndex - data.currentIndex) * sizeof(double));
+        // then copy the first values until currentIndex (because currentIndex is the most recent)
+        memcpy(orderedData + data.maxFrameIndex - data.currentIndex, data.samples, (data.currentIndex) * sizeof(double));
     }
-    //update fft_data
+}
+void updateFFTData(updateArgs args){
     fftw_plan plan;
-    plan = fftw_plan_dft_r2c_1d(SAMPLE_COUNT, (*(args.data)).samples, args.fft_data, FFTW_ESTIMATE);
+    plan = fftw_plan_dft_r2c_1d(SAMPLE_COUNT, args.data->samples, args.fft_data, FFTW_ESTIMATE);
     fftw_execute(plan);
 
     //update spectrum
     for (int i = 0; i < SAMPLE_COUNT; i++){
         args.spectrum[i] = sqrt(args.fft_data[i][0] * args.fft_data[i][0] + args.fft_data[i][1] * args.fft_data[i][1]);
     }
+}
 
+void updateData(updateArgs args){
+    //update data variable
+    for (unsigned long i = 0; i < FRAMES_PER_BUFFER; i++) {
+            // Convertir et stocker les échantillons dans le tampon circulaire
+            args.data->samples[args.data->currentIndex] = signal((double) *(args.t));
+            args.data->currentIndex = (args.data->currentIndex + 1) % args.data->maxFrameIndex;
+            *(args.t) += 1;
+            *(args.t) %= 1500;
+    }
     //update t (only for now generating data)
-    *(args.t) += 1;
-    *(args.t) %= 750;
+    /* *(args.t) += 1;
+    *(args.t) %= 750; */
 }
 
 void loop(loopArgs args){
     // !!!!!! /!\ LOOPING /!\ !!!!!!
     if (window1){
         //update all boundaries to fit the graph
-        (args.boundaries1)->yInterval.max = dataMax((*(args.data)).samples, SAMPLE_COUNT);
-        (args.boundaries1)->yInterval.min = dataMin((*(args.data)).samples, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.max = dataMax(args.orderedData, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.min = dataMin(args.orderedData, SAMPLE_COUNT);
 
         SDL_SetRenderDrawColor(renderer1, 255, 255, 255, 255);
         SDL_RenderClear(renderer1);
 
         SDL_SetRenderDrawColor(renderer1, 255, 0, 0, 255);
-        drawGraph(renderer1, (*(args.data)).samples, SAMPLE_COUNT, *(args.boundaries1), font);
+        drawGraph(renderer1, args.orderedData, SAMPLE_COUNT, *(args.boundaries1), font);
 
         SDL_RenderPresent(renderer1);
     }
@@ -116,9 +136,11 @@ void* updateDataPtr(void* update_args){
     while (!*(args.quit1) || !*(args.quit2)) {
         pthread_mutex_lock(args.globalDataLock);
         updateData(args);
+        orderData(*(args.data), args.orderedData);
+        updateFFTData(args);
         pthread_mutex_unlock(args.globalDataLock);
 
-        usleep(1000000 / RATE);
+        usleep(FRAMES_PER_BUFFER * 1000000 / RATE);
     }
     return NULL;
 }
@@ -156,6 +178,7 @@ int main() {
     data.maxFrameIndex = SAMPLE_COUNT; // 5 secs
     data.samples = (double*)malloc(sizeof(double) * data.maxFrameIndex);
     data.currentIndex = 0;
+    double *orderedData = (double*)malloc(sizeof(double) * data.maxFrameIndex);
 
     int t = 0;
 
@@ -171,8 +194,8 @@ int main() {
     pthread_mutex_init(&globalDataLock, NULL);
     
 
-    loopArgs loop_args = {&boundaries1, &boundaries2, &data, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
-    updateArgs update_args = {&data, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock};
+    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
+    updateArgs update_args = {&data, orderedData, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock};
 
     pthread_t updateThread;
 
@@ -265,50 +288,27 @@ THE FINAL FIGHT - SDL_RENDERING vs MULTI_THREADING
 
 
 HERE IS YOUR ARMY :
-    ___  
-  .|ç-ç|.
-   |___|
-    | |
-    ___  
-  .|è-è|.
-   |___|
-    | |
-    ___  
-  .|#-#|.  
-   |___|
-    | |
-    ___  
-  .|@-@|.  
-   |___|
-    | |
-    ___  
-  .|*_*|.  
-   |___|
-    | |
-    ___  
-  .|~_~|.  
-   |___|
-    | |
-    ___  
-  .|°-°|.  
-   |___|
-    | |
-    ___  
-  .|=_=|.  
-   |___|
-    | |
-    ___  
-  .|µ-µ|.  
-   |___|
-    | |
-    ___  
-  .|;-;|.  
-   |___|
-    | |
-    ___  
-  .|»-»|.
-   |___|
-    | |
+._______________________________________________________.
+|     ___     |     ___     |     ___     |     ___     |  
+|   .|ç-ç|.   |   .|è-è|.   |   .|#-#|.   |   .|@-@|.   |  
+|    |___|    |    |___|    |    |___|    |    |___|    |  
+|     | |     |     | |     |     | |     |     | |     |  
+|   Captain   |   Whisper   |    Gizmo    |    Quirk    |  
+| ______________________________________________________|
+|     ___     |     ___     |     ___     |     ___     |  
+|   .|*_*|.   |   .|~_~|.   |   .|°-°|.   |   .|=_=|.   |  
+|    |___|    |    |___|    |    |___|    |    |___|    |  
+|     | |     |     | |     |     | |     |     | |     |  
+|  Starlight  |   Snoozer   |   Oddball   |   Glitch    |  
+| ______________________________________________________|
+|     ___     |     ___     |     ___     |     ___     |  
+|   .|µ-µ|.   |   .|;-;|.   |   .|»-»|.   |   .|UwU|.   |  
+|    |___|    |    |___|    |    |___|    |    |___|    |  
+|     | |     |     | |     |     | |     |     | |     |  
+|   Mysterio  | Melancholy  |   Voyager   |    Kawaii   |  
+|_______________________________________________________|
+
+
 
 HERE'S THE BOSS :
 
