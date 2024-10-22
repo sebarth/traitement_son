@@ -324,7 +324,22 @@ HERE'S THE BOSS :
               / .________________. \
              /                      \
             /                        \
-                    THE CPYDER 
+                THE FALSE CPYDER 
+            (not spyder cuz it's in C lol)
+            
+            \   .________________
+             \  |                   
+              \ |   (°)    (°)     
+               \|   (°)    (°)    
+            \  /|   (°)    (°)      
+             \/ |   (°)    (°)     
+             /\ |                  
+            /  \|                   
+               /|                 
+              / .________________
+             /                      
+            /                        
+                 THE 1 CPYDER 
             (not spyder cuz it's in C lol)
 
 TIP1 : NOTE THAT SDL RENDERING ONLY WORKS ON THE MAIN THREAD ._.
