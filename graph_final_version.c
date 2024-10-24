@@ -1,6 +1,6 @@
+#include <math.h>
 #include <SDL2/SDL.h> //graphs
 #include <SDL2/SDL_ttf.h> //texts
-#include <math.h>
 #include <stdlib.h>
 #include <fftw3.h>
 #include <pthread.h>
@@ -8,8 +8,8 @@
 #include <string.h>
 #include "graphs.h"
 
-const int SAMPLE_COUNT = 4096;
-const int RATE = 600;
+const int SAMPLE_COUNT = 1024;
+const int RATE = 10000;
 const int FRAMES_PER_BUFFER = 1;
 
 SDL_Window* window1;
@@ -19,9 +19,13 @@ SDL_Renderer* renderer1;
 SDL_Renderer* renderer2;
 
 TTF_Font* font;
+fftwf_complex* freq_domain;
+float* time_domain;
+
+fftwf_plan fft_plan;
 
 typedef struct {
-    double *samples;   //the data
+    float *samples;   //the data
     int maxFrameIndex; //total number of indexes
     int currentIndex;  //next index to update
 } AudioData;
@@ -29,26 +33,26 @@ typedef struct{
     graphBoundaries* boundaries1;
     graphBoundaries* boundaries2;
     AudioData* data;
-    double* orderedData;
-    fftw_complex* fft_data;
-    double* spectrum;
-    int* t;
+    float* orderedData;
+    fftwf_complex* fft_data;
+    float* spectrum;
+    float* t;
     int* quit1;
     int* quit2;
     pthread_mutex_t* globalDataLock;
 } loopArgs;
 typedef struct{
     AudioData* data;
-    double* orderedData;
-    int* t;
-    fftw_complex* fft_data;
-    double* spectrum;
+    float* orderedData;
+    float* t;
+    fftwf_complex* fft_data;
+    float* spectrum;
     int* quit1;
     int* quit2;
     pthread_mutex_t* globalDataLock;
 } updateArgs;
 
-void init_sdl(){
+void init(){
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     window1 = SDL_CreateWindow("Amplitude Graph", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
@@ -60,26 +64,50 @@ void init_sdl(){
     font = TTF_OpenFont("fonts/Roboto-Light.ttf", 16);
 }
 
-double signal(double t){
-    //x(t), the signal
-    return sin(2 * M_PI * t / 1500);
+void signal_init() {
+    float freq = 1500.0;
+    freq_domain = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * SAMPLE_COUNT);
+    time_domain = (float*) fftwf_malloc(sizeof(float) * SAMPLE_COUNT);
+    
+    fftwf_plan plan = fftwf_plan_dft_c2r_1d(SAMPLE_COUNT, freq_domain, time_domain, FFTW_ESTIMATE);
+    
+    for (int i = 0; i < SAMPLE_COUNT; i++) {
+        freq_domain[i][0] = 0.0;
+        freq_domain[i][1] = 0.0;
+    }
+
+    // Find the index of the 1500 Hz bin
+    int bin = (int)((freq * SAMPLE_COUNT) / RATE);
+    freq_domain[bin][0] = SAMPLE_COUNT / 2.0;  // Amplitude (real part)
+    freq_domain[bin][1] = 0.0;      // No imaginary component for a real sine wave
+
+    // Compute the inverse FFT
+    fftwf_execute(plan);
+
+    // Normalize the output of the IFFT
+    for (int i = 0; i < SAMPLE_COUNT; i++) {
+        time_domain[i] /= SAMPLE_COUNT;  // FFTW does not normalize automatically
+    }
 }
 
-void orderData(AudioData data, double* orderedData){
+float signal(float t){
+    int index = (int)((t * RATE))%SAMPLE_COUNT;
+    return time_domain[index];
+}
+
+void orderData(AudioData data, float* orderedData){
     if (data.currentIndex == data.maxFrameIndex - 1) {
         // if current index is max index, copy the whole table bc already ordered
-        memcpy(orderedData, data.samples, data.maxFrameIndex * sizeof(double));
+        memcpy(orderedData, data.samples, data.maxFrameIndex * sizeof(float));
     } else{
         // else, copy first the last values (least recent)
-        memcpy(orderedData, data.samples + data.currentIndex, (data.maxFrameIndex - data.currentIndex) * sizeof(double));
+        memcpy(orderedData, data.samples + data.currentIndex, (data.maxFrameIndex - data.currentIndex) * sizeof(float));
         // then copy the first values until currentIndex (because currentIndex is the most recent)
-        memcpy(orderedData + data.maxFrameIndex - data.currentIndex, data.samples, (data.currentIndex) * sizeof(double));
+        memcpy(orderedData + data.maxFrameIndex - data.currentIndex, data.samples, (data.currentIndex) * sizeof(float));
     }
 }
 void updateFFTData(updateArgs args){
-    fftw_plan plan;
-    plan = fftw_plan_dft_r2c_1d(SAMPLE_COUNT, args.data->samples, args.fft_data, FFTW_ESTIMATE);
-    fftw_execute(plan);
+    fftwf_execute(fft_plan);
 
     //update spectrum
     for (int i = 0; i < SAMPLE_COUNT; i++){
@@ -91,10 +119,10 @@ void updateData(updateArgs args){
     //update data variable
     for (unsigned long i = 0; i < FRAMES_PER_BUFFER; i++) {
             // Convertir et stocker les échantillons dans le tampon circulaire
-            args.data->samples[args.data->currentIndex] = signal((double) *(args.t));
+            args.data->samples[args.data->currentIndex] = signal(*(args.t));
             args.data->currentIndex = (args.data->currentIndex + 1) % args.data->maxFrameIndex;
-            *(args.t) += 1;
-            *(args.t) %= 1500;
+            *(args.t) += 1.0 / RATE;
+            if (*(args.t) >= 1.0) *(args.t) -= 1.0;
     }
     //update t (only for now generating data)
     /* *(args.t) += 1;
@@ -140,13 +168,13 @@ void* updateDataPtr(void* update_args){
         updateFFTData(args);
         pthread_mutex_unlock(args.globalDataLock);
 
-        usleep(FRAMES_PER_BUFFER * 1000000 / RATE);
+        usleep(1000000 / (RATE * FRAMES_PER_BUFFER));
     }
     return NULL;
 }
 
 int main() {
-    init_sdl();
+    init();
 
     //1st window
     //drawing axes
@@ -176,19 +204,24 @@ int main() {
 
     AudioData data;
     data.maxFrameIndex = SAMPLE_COUNT; // 5 secs
-    data.samples = (double*)malloc(sizeof(double) * data.maxFrameIndex);
+    data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
     data.currentIndex = 0;
-    double *orderedData = (double*)malloc(sizeof(double) * data.maxFrameIndex);
+    float *orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
 
-    int t = 0;
+    float t = 0;
 
-    fftw_complex *fft_data = malloc(SAMPLE_COUNT * sizeof(fftw_complex));
-    double *spectrum = malloc(SAMPLE_COUNT * sizeof(double));
+    fftwf_complex *fft_data = (fftwf_complex*)fftwf_malloc(SAMPLE_COUNT * sizeof(fftwf_complex));
+    float *spectrum = malloc(SAMPLE_COUNT * sizeof(float));
+
+    fftwf_import_wisdom_from_filename("fftw_wisdom.txt");
+    fft_plan = fftwf_plan_dft_r2c_1d(SAMPLE_COUNT, data.samples, fft_data, FFTW_ESTIMATE);
+
 
     int quit1 = 0; // so that you stop updating the 1st window
     int quit2 = 0; // same for 2nd
     SDL_Event event;
 
+    signal_init();
     pthread_mutex_t globalDataLock;
 
     pthread_mutex_init(&globalDataLock, NULL);
@@ -234,8 +267,9 @@ int main() {
     pthread_mutex_destroy(&globalDataLock);
 
     free(data.samples);
-    free(fft_data);
     free(spectrum);
+    fftwf_free(freq_domain);
+    fftwf_free(fft_data);
     if (renderer1) SDL_DestroyRenderer(renderer1);
     if (renderer2) SDL_DestroyRenderer(renderer2);
     if (window1) SDL_DestroyWindow(window1);
@@ -324,23 +358,23 @@ HERE'S THE BOSS :
               / .________________. \
              /                      \
             /                        \
-                THE FALSE CPYDER 
-            (not spyder cuz it's in C lol)
+                THE FALSE SPYDER
+              (newbie python spider) 
             
             \   .________________
              \  |                   
-              \ |   (°)    (°)     
+              \ |   (°)         
                \|   (°)    (°)    
             \  /|   (°)    (°)      
              \/ |   (°)    (°)     
-             /\ |                  
+             /\ |          (°)        
             /  \|                   
                /|                 
               / .________________
              /                      
             /                        
                  THE 1 CPYDER 
-            (not spyder cuz it's in C lol)
+         (not spyder cuz it's in C lol)
 
 TIP1 : NOTE THAT SDL RENDERING ONLY WORKS ON THE MAIN THREAD ._.
 TIP2 : THAT's ALL...........................
