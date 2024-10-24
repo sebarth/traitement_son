@@ -1,16 +1,15 @@
-//TODO tester le code un jour quand j'aurai un micro
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <portaudio.h>
+#include <string.h>
 
 #define SAMPLE_RATE  44100
 #define FRAMES_PER_BUFFER 256
 
 typedef struct {
     float *samples;
-    int maxFrameIndex;  // Capacité du tableau, ici pour 5 secondes
-    int currentIndex;   // L'indice pour écrire les nouveaux échantillons
+    int maxFrameIndex;
+    int currentIndex;
 } AudioData;
 
 static int audioCallback(const void *inputBuffer, void *outputBuffer,
@@ -27,10 +26,9 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
         }
     } else {
         for (unsigned long i = 0; i < framesPerBuffer; i++) {
-            // Stocker l'échantillon dans le tampon circulaire
+            // store the samples in the circular buffer
             data->samples[data->currentIndex] = *in++;
-            
-            // Incrémenter l'indice circulaire
+            // update the index
             data->currentIndex = (data->currentIndex + 1) % data->maxFrameIndex;
         }
     }
@@ -38,13 +36,12 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 }
 
 void copySamplesInOrder(AudioData *data, float *orderedSamples) {
-    int start = data->currentIndex;  // Point de départ du tampon circulaire
+    int start = data->currentIndex;
     int size = data->maxFrameIndex;
-
-    // Copier les données dans le bon ordre
-    for (int i = 0; i < size; i++) {
-        orderedSamples[i] = data->samples[(start + i) % size];
-    }
+    // copy first the last values (least recent)
+    memcpy(orderedSamples, data->samples + data->currentIndex, (data->maxFrameIndex - data->currentIndex) * sizeof(double));
+    // then copy the first values until currentIndex (because currentIndex is the most recent)
+    memcpy(orderedSamples + data->maxFrameIndex - data->currentIndex, data->samples, (data->currentIndex) * sizeof(double));
 }
 
 int main(void) {
@@ -52,39 +49,30 @@ int main(void) {
     PaError err;
     AudioData data;
 
-    // Le tableau doit contenir 5 secondes d'échantillons
-    data.maxFrameIndex = SAMPLE_RATE * 5;  // 5 secondes d'échantillons
+    data.maxFrameIndex = SAMPLE_RATE * 5; // 5 seconds
     data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
-    data.currentIndex = 0;  // Initialiser à 0
+    data.currentIndex = 0;
 
-    // Tampon temporaire pour stocker les données dans l'ordre
+    // temprary buffer to store the samples in the right order
     float *orderedSamples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
 
-    // Initialisation de PortAudio
     err = Pa_Initialize();
     if (err != paNoError) goto error;
 
-    // Ouvrir le flux audio
     err = Pa_OpenDefaultStream(&stream,
-                               1,          // Canaux d'entrée (mono)
-                               0,          // Pas de sortie
-                               paFloat32,  // Format 32 bits float
+                               1,          // mono input
+                               0,          // no output
+                               paFloat32,  // format 32 bits float
                                SAMPLE_RATE,
                                FRAMES_PER_BUFFER,
                                audioCallback,
                                &data);
     if (err != paNoError) goto error;
 
-    // Démarrer le flux
     err = Pa_StartStream(stream);
-    if (err != paNoError) goto error;
+    if (err != paNoError) goto error;    
+    // TODO add code here before stopping the stream
 
-    printf("Enregistrement en cours... Appuyez sur Entrée pour quitter\n");
-    
-    // Continue d'enregistrer jusqu'à l'appui sur Entrée
-    getchar();
-
-    // Arrêter le flux
     err = Pa_StopStream(stream);
     if (err != paNoError) goto error;
 
@@ -92,15 +80,6 @@ int main(void) {
     if (err != paNoError) goto error;
 
     Pa_Terminate();
-
-    // Copier les données dans le bon ordre
-    copySamplesInOrder(&data, orderedSamples);
-
-    // Tu peux maintenant utiliser `orderedSamples` pour générer le graphique
-    printf("Les 5 dernières secondes d'audio dans le bon ordre :\n");
-    for (int i = 0; i < data.maxFrameIndex; i++) {
-        printf("%f\n", orderedSamples[i]);
-    }
 
     free(data.samples);
     free(orderedSamples);
