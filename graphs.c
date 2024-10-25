@@ -37,7 +37,7 @@ float dataMin(float* data, int size) {
 
 float maxAbs(float a, float b){
     // returns the max absolute value
-    return (abs(a) > abs(b)) ? abs(a) : abs(b);
+    return (fabsf(a) > fabsf(b)) ? fabsf(a) : fabsf(b);
 }
 
 void getCoords(float coords[2], graphBoundaries boundaries){
@@ -55,12 +55,12 @@ void getCoords(float coords[2], graphBoundaries boundaries){
     float a_x = ((float)(graph_width)) / (boundaries.xInterval.max - boundaries.xInterval.min);
     // b = y1 - x1*a
     float b_x = (float) (MARGIN_WIDTH + graph_width + graph_margin_width) -  boundaries.xInterval.max * a_x;
-    coords[0] = round(a_x * coords[0] + b_x);
-    
-    //do the same for y
+    coords[0] = roundf(a_x * coords[0] + b_x);
+
+    // do the same for y
     float a_y = (float) (graph_height) / (boundaries.yInterval.max - boundaries.yInterval.min);
     float b_y = (float) (MARGIN_HEIGHT + graph_height + graph_margin_height) -  boundaries.yInterval.max * a_y;
-    coords[1] = HEIGHT - round(a_y * coords[1] + b_y);
+    coords[1] = (float) HEIGHT - roundf(a_y * coords[1] + b_y);
 
     return;
 }

@@ -2,6 +2,7 @@
 #include "fft.h"
 #include "signal_generation.h"
 #include "rendering.h"
+#include "audio_capture.h"
 
 SDL_Window* window1;
 SDL_Window* window2;
@@ -13,23 +14,28 @@ TTF_Font* font;
 
 fftwf_plan fft_plan;
 
+float* orderedData;
+pthread_mutex_t globalDataLock;
+
 int main() {
+    PaStream *stream;
+    PaError err;
     graphBoundaries boundaries1;
     graphBoundaries boundaries2;
     init(&boundaries1, &boundaries2);
 
     AudioData data;
-    data.maxFrameIndex = SAMPLE_COUNT; // 5 secs
+    data.maxFrameIndex = SAMPLE_COUNT; 
     data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
     data.currentIndex = 0;
-    float *orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
 
     float t = 0;
 
     fftwf_complex *fft_data = (fftwf_complex*)fftwf_malloc(SAMPLE_COUNT * sizeof(fftwf_complex));
     float *spectrum = malloc(SAMPLE_COUNT * sizeof(float));
 
-    fftwf_complex* freq_domain = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * SAMPLE_COUNT);
+    fftwf_complex* freq_domain = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * SAMPLE_COUNT);
     float* time_domain = (float*) fftwf_malloc(sizeof(float) * SAMPLE_COUNT);
 
     fft_init(SAMPLE_COUNT, data.samples, fft_data, "fftw_wisdom.txt", &fft_plan);
@@ -39,17 +45,31 @@ int main() {
     int quit2 = 0;
     SDL_Event event;
 
-    pthread_mutex_t globalDataLock;
-
     pthread_mutex_init(&globalDataLock, NULL);
     // for generating the signal
 
     loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
-    updateArgs update_args = {&data, orderedData, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock, freq_domain, time_domain, fft_plan};
+    //updateArgs update_args = {&data, orderedData, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock, freq_domain, time_domain, fft_plan};
 
-    pthread_t updateThread;
+    //pthread_t updateThread;
 
-    pthread_create(&updateThread, NULL, updateDataPtr, &update_args);
+    //pthread_create(&updateThread, NULL, updateDataPtr, &update_args);
+    
+    err = Pa_Initialize();
+    if (err != paNoError) goto error;
+
+    err = Pa_OpenDefaultStream(&stream,
+                               1,          // mono input
+                               0,          // no output
+                               paFloat32,  // format 32 bits float
+                               SAMPLE_RATE,
+                               FRAMES_PER_BUFFER,
+                               customAudioCallback,
+                               &data);
+    if (err != paNoError) goto error;
+
+    err = Pa_StartStream(stream);
+    if (err != paNoError) goto error;
 
     while (!quit1 || !quit2) {
         // Event handling
@@ -71,15 +91,24 @@ int main() {
                 }
             }
         }
+        copySamplesInOrder(&data, orderedData);
+        updateFFTData(fft_data, spectrum, SAMPLE_COUNT, fft_plan);
         pthread_mutex_lock(&globalDataLock);
         loop(loop_args);
         pthread_mutex_unlock(&globalDataLock);
 
-        usleep(1000000 / 60); // Update at ~60 frames per second
-    } 
+        usleep((int)1e6 / 60); // Update at ~60 frames per second
+    }
 
+    err = Pa_StopStream(stream);
+    if (err != paNoError) goto error;
 
-    pthread_join(updateThread, NULL);
+    err = Pa_CloseStream(stream);
+    if (err != paNoError) goto error;
+
+    Pa_Terminate();
+
+    //pthread_join(updateThread, NULL);
 
     pthread_mutex_destroy(&globalDataLock);
     
@@ -97,106 +126,8 @@ int main() {
     if (window2) SDL_DestroyWindow(window2);
     SDL_Quit();
     return 0;
+error:
+    Pa_Terminate();
+    fprintf(stderr, "Ugh, there's an error : %s\n", Pa_GetErrorText(err));
+    return -1;
 }
-
-/*
-
-         _____
-         /°_°\
-        /|   |\
-      _/ |   | \_
-         \___/
-         |   |
-        _|   |_
-       Here's Bob. 
-He just said he wanted to
-     read this code.
-         _____
-    .____/>_<\____.
-         |   |
-         |   |
-         \___/
-         |   |
-        _|   |_
-     This is also Bob. 
-  He just read this code.
-
-    |^^^^^^^^^^^^^^|
-    |.____.||.____.|
-   <|\.___.||.___./|>
-    | \.__.||.__./ |
-   <|  \._.||._./  |>
-    |   \..||../   |
-   <|    \.||./    |>
-    |     \||/     |
-   <|=====|°°|=====|>
-    |-----/..\-----|
-   <|====/.__.\====|>
-    |---/.____.\---|
-   <|==/.______.\==|>
-    |-/.________.\-|
-   <|/.__________.\|>
-    |.____________.|
-
-
-THE FINAL FIGHT - SDL_RENDERING vs MULTI_THREADING
-
-
-HERE IS YOUR ARMY :
-._______________________________________________________.
-|     ___     |     ___     |     ___     |     ___     |  
-|   .|ç-ç|.   |   .|è-è|.   |   .|#-#|.   |   .|@-@|.   |  
-|    |___|    |    |___|    |    |___|    |    |___|    |  
-|     | |     |     | |     |     | |     |     | |     |  
-|   Captain   |   Whisper   |    Gizmo    |    Quirk    |  
-| ______________________________________________________|
-|     ___     |     ___     |     ___     |     ___     |  
-|   .|*_*|.   |   .|~_~|.   |   .|°-°|.   |   .|=_=|.   |  
-|    |___|    |    |___|    |    |___|    |    |___|    |  
-|     | |     |     | |     |     | |     |     | |     |  
-|  Starlight  |   Snoozer   |   Oddball   |   Glitch    |  
-| ______________________________________________________|
-|     ___     |     ___     |     ___     |     ___     |  
-|   .|µ-µ|.   |   .|;-;|.   |   .|»-»|.   |   .|UwU|.   |  
-|    |___|    |    |___|    |    |___|    |    |___|    |  
-|     | |     |     | |     |     | |     |     | |     |  
-|   Mysterio  | Melancholy  |   Voyager   |    Kawaii   |  
-|_______________________________________________________|
-
-
-
-HERE'S THE BOSS :
-
-            \   .________________.   /
-             \  |                |  /
-              \ |   (°)    (°)   | /
-               \|   (°)    (°)   |/
-            \  /|   (°)    (°)   |\  /
-             \/ |   (°)    (°)   | \/
-             /\ |                | /\
-            /  \|                |/  \
-               /|                |\
-              / .________________. \
-             /                      \
-            /                        \
-                THE FALSE SPYDER
-              (newbie python spider) 
-            
-            \   .________________
-             \  |                   
-              \ |   (°)         
-               \|   (°)    (°)    
-            \  /|   (°)    (°)      
-             \/ |   (°)    (°)     
-             /\ |          (°)        
-            /  \|                   
-               /|                 
-              / .________________
-             /                      
-            /                        
-                 THE 1 CPYDER 
-         (not spyder cuz it's in C lol)
-
-TIP1 : NOTE THAT SDL RENDERING ONLY WORKS ON THE MAIN THREAD ._.
-TIP2 : THAT's ALL.............................
-*/

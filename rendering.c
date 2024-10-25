@@ -17,7 +17,7 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2){
     SDL_SetRenderDrawColor(renderer1, 255, 255, 255, 255); // Set to white background
     SDL_RenderClear(renderer1);
     SDL_SetRenderTarget(renderer1, NULL);
-    boundaries1->xInterval.min = -5.0f;
+    boundaries1->xInterval.min = -(float)SAMPLE_COUNT / SAMPLE_RATE;
     boundaries1->xInterval.max = 0.0f;
     boundaries1->yInterval.min = -1.0f;
     boundaries1->yInterval.max = 1.0f;
@@ -31,14 +31,15 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2){
     //max val of k : SAMPLE_COUNT/2 --> SAMPLE_COUNT / 2 * SAMPLE_RATE / SAMPLE_COUNT = SAMPLE_RATE / 2
     boundaries2->xInterval.max = SAMPLE_RATE / 2.0f;
     boundaries2->yInterval.min = 0.0f;
-    //yInterval's max value will be updated in loop
+    boundaries2->yInterval.max = 1.0f;
 }
 
 void loop(loopArgs args){
     if (window1){
         //update all boundaries to fit the graph
-        (args.boundaries1)->yInterval.max = dataMax(args.orderedData, SAMPLE_COUNT);
-        (args.boundaries1)->yInterval.min = dataMin(args.orderedData, SAMPLE_COUNT);
+        /*(args.boundaries1)->yInterval.max = dataMax(args.orderedData, SAMPLE_COUNT);
+        (args.boundaries1)->yInterval.min = dataMin(args.orderedData, SAMPLE_COUNT);*/
+        
 
         SDL_SetRenderDrawColor(renderer1, 255, 255, 255, 255);
         SDL_RenderClear(renderer1);

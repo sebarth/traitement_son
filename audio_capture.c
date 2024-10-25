@@ -1,18 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <portaudio.h>
 #include <string.h>
+#include "audio_capture.h"
 
+/*
 #define SAMPLE_RATE  44100
 #define FRAMES_PER_BUFFER 256
+*/
 
-typedef struct {
-    float *samples;
-    int maxFrameIndex;
-    int currentIndex;
-} AudioData;
+void copySamplesInOrder(AudioData *data, float *orderedSamples) {
+    int start = data->currentIndex;
+    int size = data->maxFrameIndex;
+    // copy first the last values (least recent)
+    memcpy(orderedSamples, data->samples + data->currentIndex, (data->maxFrameIndex - data->currentIndex) * sizeof(double));
+    // then copy the first values until currentIndex (because currentIndex is the most recent)
+    memcpy(orderedSamples + data->maxFrameIndex - data->currentIndex, data->samples, (data->currentIndex) * sizeof(double));
+}
 
-static int audioCallback(const void *inputBuffer, void *outputBuffer,
+int customAudioCallback(const void *inputBuffer, void *outputBuffer,
                          unsigned long framesPerBuffer,
                          const PaStreamCallbackTimeInfo* timeInfo,
                          PaStreamCallbackFlags statusFlags,
@@ -26,25 +31,18 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
         }
     } else {
         for (unsigned long i = 0; i < framesPerBuffer; i++) {
+            pthread_mutex_lock(&globalDataLock);
             // store the samples in the circular buffer
             data->samples[data->currentIndex] = *in++;
             // update the index
             data->currentIndex = (data->currentIndex + 1) % data->maxFrameIndex;
+            pthread_mutex_unlock(&globalDataLock);
         }
     }
     return paContinue;
 }
 
-void copySamplesInOrder(AudioData *data, float *orderedSamples) {
-    int start = data->currentIndex;
-    int size = data->maxFrameIndex;
-    // copy first the last values (least recent)
-    memcpy(orderedSamples, data->samples + data->currentIndex, (data->maxFrameIndex - data->currentIndex) * sizeof(double));
-    // then copy the first values until currentIndex (because currentIndex is the most recent)
-    memcpy(orderedSamples + data->maxFrameIndex - data->currentIndex, data->samples, (data->currentIndex) * sizeof(double));
-}
-
-int main(void) {
+/*int main(void) {
     PaStream *stream;
     PaError err;
     AudioData data;
@@ -65,13 +63,13 @@ int main(void) {
                                paFloat32,  // format 32 bits float
                                SAMPLE_RATE,
                                FRAMES_PER_BUFFER,
-                               audioCallback,
+                               customAudioCallback,
                                &data);
     if (err != paNoError) goto error;
 
     err = Pa_StartStream(stream);
-    if (err != paNoError) goto error;    
-    // TODO add code here before stopping the stream
+    if (err != paNoError) goto error;
+    
 
     err = Pa_StopStream(stream);
     if (err != paNoError) goto error;
@@ -90,3 +88,4 @@ error:
     fprintf(stderr, "Une erreur est survenue: %s\n", Pa_GetErrorText(err));
     return -1;
 }
+*/

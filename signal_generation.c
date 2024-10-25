@@ -22,7 +22,7 @@ void signal_init(fftwf_complex* freq_domain, float* time_domain, float freq) {
     }
 }
 
-float signal(float t, float* time_domain){
+float generated_signal(float t, float* time_domain){
     int index = (int)((t * SAMPLE_RATE))%SAMPLE_COUNT;
     return time_domain[index];
 }
@@ -30,7 +30,7 @@ float signal(float t, float* time_domain){
 void updateData(updateArgs args){
     // Update data variable
     for (unsigned long i = 0; i < FRAMES_PER_BUFFER; i++) {
-            args.data->samples[args.data->currentIndex] = signal(*(args.t), args.time_domain);
+            args.data->samples[args.data->currentIndex] = generated_signal(*(args.t), args.time_domain);
             args.data->currentIndex = (args.data->currentIndex + 1) % args.data->maxFrameIndex;
             *(args.t) += 1.0 / SAMPLE_RATE;
             if (*(args.t) >= 1.0f) *(args.t) -= 1.0f;
