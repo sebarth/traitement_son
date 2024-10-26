@@ -9,15 +9,13 @@
 #ifndef WINDOW_CONSTANTS
 #define WINDOW_CONSTANTS
 
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 1440
+#define HEIGHT 800
 
 #endif // WINDOW_CONSTANTS
 
-#define GRAPH_WIDTH 600
-#define GRAPH_HEIGHT 400
-#define MARGIN_WIDTH 50
-#define MARGIN_HEIGHT 50
+#define MARGIN_WIDTH 150
+#define MARGIN_HEIGHT 150
 #define NUM_TICKS 10 //for axes
 
 #ifndef GRAPH_BOUNDARIES

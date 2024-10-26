@@ -1,8 +1,8 @@
-#ifndef RENDERING_H
-#define RENDERING_H
 #include <fftw3.h>
 #include <SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <unistd.h>
+#include <stdbool.h>
 #include "graphs.h"
 
 #ifndef WINDOW_CONSTANTS
@@ -16,22 +16,21 @@
 #ifndef SAMPLE_CONSTS
 #define SAMPLE_CONSTS
 
-#define SAMPLE_RATE 10000
+#define SAMPLE_RATE 44100
 #define SAMPLE_COUNT SAMPLE_RATE * 1
-#define FRAMES_PER_BUFFER 1
+#define FRAMES_PER_BUFFER 256
 
 #endif // SAMPLE_CONSTS
 
 #ifndef WINDOWS
 #define WINDOWS
 
-extern SDL_Window* window1;
-extern SDL_Window* window2;
+extern SDL_Window* main_window;
 
-extern SDL_Renderer* renderer1;
-extern SDL_Renderer* renderer2;
+extern SDL_Renderer* main_renderer;
 
 extern TTF_Font* font;
+extern TTF_Font* textFont;
 
 #endif // WINDOWS
 
@@ -61,6 +60,15 @@ typedef struct {
 
 #endif // GRAPH_BOUNDARIES
 
+typedef struct {
+    SDL_Rect rect;
+    SDL_Color color;
+    SDL_Color hoverColor;
+    char* text;
+    bool isHovered;
+    void (*onClick)(void* args); // kinda ugly but loopArgs is not defined yet...
+} Button;
+
 typedef struct{
     graphBoundaries* boundaries1;
     graphBoundaries* boundaries2;
@@ -69,12 +77,14 @@ typedef struct{
     fftwf_complex* fft_data;
     float* spectrum;
     float* t;
-    int* quit1;
-    int* quit2;
+    int* quit;
     pthread_mutex_t* globalDataLock;
+    int currentWindow; // value is 1 or 2
+    Button* button;
 } loopArgs;
 
-void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2);
+void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button);
 void loop(loopArgs args);
-
-#endif // RENDERING_H
+void renderButton(SDL_Renderer* renderer, Button* button);
+bool isMouseOverButton(Button* button, int mouseX, int mouseY);
+void onButtonClick(void* v_args);
