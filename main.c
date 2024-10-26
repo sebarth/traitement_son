@@ -19,10 +19,12 @@ int main() {
     init(&boundaries1, &boundaries2);
 
     AudioData data;
-    data.maxFrameIndex = SAMPLE_COUNT; // 5 secs
-    data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    data.maxFrameIndex = SAMPLE_COUNT;
     data.currentIndex = 0;
-    float *orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    float *orderedData;
+
+    data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
 
     float t = 0;
 
@@ -42,7 +44,6 @@ int main() {
     pthread_mutex_t globalDataLock;
 
     pthread_mutex_init(&globalDataLock, NULL);
-    // for generating the signal
 
     loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
     updateArgs update_args = {&data, orderedData, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock, freq_domain, time_domain, fft_plan};

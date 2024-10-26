@@ -4,6 +4,7 @@
 #include <fftw3.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include <unistd.h>
 #include "fft.h"
 
@@ -12,7 +13,7 @@
 
 #define SAMPLE_COUNT 1024
 #define SAMPLE_RATE 10000
-#define FRAMES_PER_BUFFER 1
+#define FRAMES_PER_BUFFER 256
 
 #endif // SAMPLE_CONSTS
 
@@ -44,7 +45,7 @@ typedef struct{
 
 void signal_init(fftwf_complex* freq_domain, float* time_domain, float freq);
 float signal(float t, float* time_domain);
-void updateData(updateArgs args);
+void updateData(updateArgs args, struct timespec start_time);
 void orderData(AudioData data, float* orderedData);
 void* updateDataPtr(void* update_args);
 
