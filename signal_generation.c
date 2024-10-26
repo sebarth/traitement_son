@@ -25,11 +25,12 @@ void signal_init(fftwf_complex* freq_domain, float* time_domain, float freq) {
     } */
 }
 
-float signal(float t, float* time_domain){
+float generated_signal(float t, float* time_domain){
     int index = (int)((t * SAMPLE_RATE))%SAMPLE_COUNT;
     return time_domain[index];
 }
 
+void updateData(updateArgs args){
 void updateData(updateArgs args, struct timespec start_time){// Update data variable
     struct timespec current_time;
     clock_gettime(CLOCK_MONOTONIC, &current_time);

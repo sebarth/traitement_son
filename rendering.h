@@ -1,7 +1,7 @@
 #ifndef RENDERING_H
 #define RENDERING_H
 #include <fftw3.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "graphs.h"
 
@@ -16,8 +16,8 @@
 #ifndef SAMPLE_CONSTS
 #define SAMPLE_CONSTS
 
-#define SAMPLE_COUNT 1024
 #define SAMPLE_RATE 10000
+#define SAMPLE_COUNT SAMPLE_RATE * 1
 #define FRAMES_PER_BUFFER 1
 
 #endif // SAMPLE_CONSTS

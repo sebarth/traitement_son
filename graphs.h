@@ -1,7 +1,7 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#include <SDL2/SDL.h> //graphs
+#include <SDL.h> //graphs
 #include <SDL2/SDL_ttf.h> //texts
 #include <math.h>
 #include <stdlib.h>
@@ -9,15 +9,15 @@
 #ifndef WINDOW_CONSTANTS
 #define WINDOW_CONSTANTS
 
-#define WIDTH 1000
-#define HEIGHT 800
+#define WIDTH 800
+#define HEIGHT 600
 
 #endif // WINDOW_CONSTANTS
 
-#define GRAPH_WIDTH 800
-#define GRAPH_HEIGHT 600
-#define MARGIN_WIDTH 100
-#define MARGIN_HEIGHT 100
+#define GRAPH_WIDTH 600
+#define GRAPH_HEIGHT 400
+#define MARGIN_WIDTH 50
+#define MARGIN_HEIGHT 50
 #define NUM_TICKS 10 //for axes
 
 #ifndef GRAPH_BOUNDARIES
