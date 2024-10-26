@@ -1,8 +1,7 @@
 #include "graphs.h"
 
-void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y) {
-    SDL_Color black = {0, 0, 0};
-    SDL_Surface* surface = TTF_RenderText_Solid(font, text, black);
+void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color color) {
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
 
     int texW = 0;
@@ -91,7 +90,7 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
         int text_width = 0;
         TTF_SizeText(font, label, &text_width, &text_height);
 
-        drawText(renderer, font, label, tick_coords[0] - text_width/2, HEIGHT - MARGIN_HEIGHT + tick_size);
+        drawText(renderer, font, label, tick_coords[0] - text_width/2, HEIGHT - MARGIN_HEIGHT + tick_size, (SDL_Color){0, 0, 0, 255});
     }
 
     for (int i = 0; i <= NUM_TICKS; i++) {
@@ -113,7 +112,7 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
         int text_width = 0;
         TTF_SizeText(font, label, &text_width, &text_height);
 
-        drawText(renderer, font, label, MARGIN_WIDTH - tick_size - text_width - 3, tick_coords[1] - text_height / 2);
+        drawText(renderer, font, label, MARGIN_WIDTH - tick_size - text_width - 3, tick_coords[1] - text_height / 2, (SDL_Color){0, 0, 0, 255});
     }
 }
 

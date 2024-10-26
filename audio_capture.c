@@ -1,12 +1,26 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "audio_capture.h"
 
-/*
-#define SAMPLE_RATE  44100
-#define FRAMES_PER_BUFFER 256
-*/
+void exportToWav(const char *filename, float *data, int numFrames, int sampleRate) {
+    // Define the format of the WAV file
+    SF_INFO sfinfo;
+    sfinfo.frames = numFrames;
+    sfinfo.samplerate = sampleRate;
+    sfinfo.channels = 1; // Mono
+    sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+
+    // Open the output file
+    SNDFILE *outfile = sf_open(filename, SFM_WRITE, &sfinfo);
+    if (!outfile) {
+        fprintf(stderr, "Error opening output file '%s': %s\n", filename, sf_strerror(NULL));
+        return;
+    }
+
+    // Write the data to the file
+    sf_write_float(outfile, data, numFrames);
+
+    // Close the file
+    sf_close(outfile);
+}
 
 void copySamplesInOrder(AudioData *data, float *orderedSamples) {
     int start = data->currentIndex;
@@ -41,51 +55,3 @@ int customAudioCallback(const void *inputBuffer, void *outputBuffer,
     }
     return paContinue;
 }
-
-/*int main(void) {
-    PaStream *stream;
-    PaError err;
-    AudioData data;
-
-    data.maxFrameIndex = SAMPLE_RATE * 5; // 5 seconds
-    data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
-    data.currentIndex = 0;
-
-    // temprary buffer to store the samples in the right order
-    float *orderedSamples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
-
-    err = Pa_Initialize();
-    if (err != paNoError) goto error;
-
-    err = Pa_OpenDefaultStream(&stream,
-                               1,          // mono input
-                               0,          // no output
-                               paFloat32,  // format 32 bits float
-                               SAMPLE_RATE,
-                               FRAMES_PER_BUFFER,
-                               customAudioCallback,
-                               &data);
-    if (err != paNoError) goto error;
-
-    err = Pa_StartStream(stream);
-    if (err != paNoError) goto error;
-    
-
-    err = Pa_StopStream(stream);
-    if (err != paNoError) goto error;
-
-    err = Pa_CloseStream(stream);
-    if (err != paNoError) goto error;
-
-    Pa_Terminate();
-
-    free(data.samples);
-    free(orderedSamples);
-    return 0;
-
-error:
-    Pa_Terminate();
-    fprintf(stderr, "Une erreur est survenue: %s\n", Pa_GetErrorText(err));
-    return -1;
-}
-*/

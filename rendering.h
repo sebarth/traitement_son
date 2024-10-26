@@ -30,7 +30,8 @@ extern SDL_Window* main_window;
 extern SDL_Renderer* main_renderer;
 
 extern TTF_Font* font;
-extern TTF_Font* textFont;
+extern TTF_Font* buttonFont;
+extern TTF_Font* legendFont;
 
 #endif // WINDOWS
 
@@ -62,8 +63,9 @@ typedef struct {
 
 typedef struct {
     SDL_Rect rect;
-    SDL_Color color;
+    SDL_Color bgColor;
     SDL_Color hoverColor;
+    SDL_Color textColor;
     char* text;
     bool isHovered;
     void (*onClick)(void* args); // kinda ugly but loopArgs is not defined yet...
@@ -81,6 +83,8 @@ typedef struct{
     pthread_mutex_t* globalDataLock;
     int currentWindow; // value is 1 or 2
     Button* button;
+    SDL_Color color1;
+    SDL_Color color2;
 } loopArgs;
 
 void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button);

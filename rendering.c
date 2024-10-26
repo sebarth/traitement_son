@@ -8,7 +8,8 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* bu
     main_renderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_PRESENTVSYNC);
 
     font = TTF_OpenFont("fonts/Roboto-Light.ttf", 16);
-    textFont = TTF_OpenFont("fonts/Roboto-Light.ttf", 24);
+    buttonFont = TTF_OpenFont("fonts/Roboto-Regular.ttf", 16);
+	legendFont = TTF_OpenFont("fonts/Roboto-Italic.ttf", 16);
 
     SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 255); // Set to white background
     SDL_RenderClear(main_renderer);
@@ -26,9 +27,9 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* bu
     boundaries2->yInterval.min = 0.0f;
     boundaries2->yInterval.max = 1.0f;
 
-    button->rect = (SDL_Rect){WIDTH / 2 - 100, HEIGHT - MARGIN_HEIGHT + 50, 200, 75};
+    button->rect = (SDL_Rect){WIDTH / 2 - 75, HEIGHT - MARGIN_HEIGHT + 50, 150, 50};
     //grey color
-    button->color = (SDL_Color){200, 200, 200, 255};
+    button->bgColor = (SDL_Color){200, 200, 200, 255};
     //darker grey color
     button->hoverColor = (SDL_Color){175, 175, 175, 255};
     button->text = "Switch Graph";
@@ -71,7 +72,7 @@ void drawRoundedRectWithBorder(SDL_Renderer *renderer, SDL_Rect rect, int radius
     // Draw the border
     SDL_SetRenderDrawColor(renderer, borderColor.r, borderColor.g, borderColor.b, borderColor.a);
    
-    int numPoints = 50; // Number of points to use for the circle
+    int numPoints = 100; // Number of points to use for the circle
     double angleStep = M_PI_2 / numPoints; // Step size for each point (90 degrees divided by numPoints)
 
     for (int i = 0; i <= numPoints; i++) {
@@ -94,22 +95,21 @@ void drawRoundedRectWithBorder(SDL_Renderer *renderer, SDL_Rect rect, int radius
 }
 
 void renderButton(SDL_Renderer* renderer, Button* button) {
-    SDL_Color color;
+    SDL_Color bgColor;
     if (button->isHovered) {
-        color = button->hoverColor;
+        bgColor = button->hoverColor;
     } else {
-        color = button->color;
+        bgColor = button->bgColor;
     }
-    drawRoundedRectWithBorder(main_renderer, button->rect, 10, color, (SDL_Color){0, 0, 0, 255});
+    drawRoundedRectWithBorder(main_renderer, button->rect, 10, bgColor, (SDL_Color){0, 0, 0, 255});
     int text_height = 0;
     int text_width = 0;
     TTF_SizeText(font, button->text, &text_width, &text_height);
-    drawText(renderer, font, button->text, button->rect.x + button->rect.w / 2 - text_width / 2, button->rect.y + button->rect.h / 2 - text_height / 2);
+    drawText(renderer, buttonFont, button->text, button->rect.x + button->rect.w / 2 - text_width / 2, button->rect.y + button->rect.h / 2 - text_height / 2, button->textColor);
 }
 
 bool isMouseOverButton(Button *button, int mouseX, int mouseY) {
-    return (mouseX >= button->rect.x && mouseX <= button->rect.x + button->rect.w &&
-            mouseY >= button->rect.y && mouseY <= button->rect.y + button->rect.h);
+    return (mouseX >= button->rect.x && mouseX <= button->rect.x + button->rect.w && mouseY >= button->rect.y && mouseY <= button->rect.y + button->rect.h);
 }
 
 void onButtonClick(void* v_args) {
@@ -127,14 +127,16 @@ void loop(loopArgs args){
     if (args.currentWindow == 1){
         //update all boundaries to fit the graph
         //have to put min value (here 0.1f) or it bugs and doesn't display well (bc min = max so you divide by 0)
-        (args.boundaries1)->yInterval.max = maxAbs(dataMax(args.orderedData, SAMPLE_COUNT), 0.1f);
+        (args.boundaries1)->yInterval.max = maxAbs(maxAbs(dataMax(args.orderedData, SAMPLE_COUNT), dataMin(args.orderedData, SAMPLE_COUNT)), 0.1f);
         (args.boundaries1)->yInterval.min = -args.boundaries1->yInterval.max;
-        
 
         SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 255);
         SDL_RenderClear(main_renderer);
 
-        SDL_SetRenderDrawColor(main_renderer, 255, 0, 0, 255);
+		drawText(main_renderer, legendFont, "Amplitude (Arbitrary unit)", MARGIN_WIDTH, MARGIN_HEIGHT - 30, (SDL_Color){0, 0, 0, 255});
+		drawText(main_renderer, legendFont, "Time (s)", WIDTH - MARGIN_WIDTH + 15, HEIGHT - MARGIN_HEIGHT + 15, (SDL_Color){0, 0, 0, 255});
+
+        SDL_SetRenderDrawColor(main_renderer, args.color1.r, args.color1.g, args.color1.b, args.color1.a);
         drawGraph(main_renderer, args.orderedData, SAMPLE_COUNT, *(args.boundaries1), font);
         renderButton(main_renderer, args.button);
         
@@ -148,7 +150,9 @@ void loop(loopArgs args){
         SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 255);
         SDL_RenderClear(main_renderer);
 
-        SDL_SetRenderDrawColor(main_renderer, 0, 0, 255, 255);
+		drawText(main_renderer, legendFont, "Frequency (Hz)", WIDTH - MARGIN_WIDTH + 15, HEIGHT - MARGIN_HEIGHT + 15, (SDL_Color){0, 0, 0, 255});
+
+        SDL_SetRenderDrawColor(main_renderer, args.color2.r, args.color2.g, args.color2.b, args.color2.a);
         drawGraph(main_renderer, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), font);
         renderButton(main_renderer, args.button);
 
