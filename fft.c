@@ -1,9 +1,9 @@
 #include "fft.h"
 
 void fft_init(int size, float* in, fftwf_complex* out, char* file, fftwf_plan* plan) {
-    // if (file != NULL) fftwf_import_wisdom_from_filename(file);
+    if (file != NULL) fftwf_import_wisdom_from_filename(file);
     *plan = fftwf_plan_dft_r2c_1d(size, in, out, FFTW_PATIENT);
-    fftwf_export_wisdom_to_filename(file);
+    // fftwf_export_wisdom_to_filename(file);
 }
 
 void updateFFTData(fftwf_complex* fft_data, float* spectrum, int size, fftwf_plan plan) {

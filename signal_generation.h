@@ -4,6 +4,7 @@
 #include <fftw3.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include <unistd.h>
 #include "fft.h"
 
@@ -43,8 +44,8 @@ typedef struct{
 } updateArgs;
 
 void signal_init(fftwf_complex* freq_domain, float* time_domain, float freq);
-float generated_signal(float t, float* time_domain);
-void updateData(updateArgs args);
+float signal(float t, float* time_domain);
+void updateData(updateArgs args, struct timespec start_time);
 void orderData(AudioData data, float* orderedData);
 void* updateDataPtr(void* update_args);
 
