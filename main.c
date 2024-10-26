@@ -1,16 +1,14 @@
 #include "graphs.h"
 #include "fft.h"
-#include "signal_generation.h"
 #include "rendering.h"
 #include "audio_capture.h"
 
-SDL_Window* window1;
-SDL_Window* window2;
+SDL_Window* main_window;
 
-SDL_Renderer* renderer1;
-SDL_Renderer* renderer2;
+SDL_Renderer* main_renderer;
 
 TTF_Font* font;
+TTF_Font* textFont;
 
 fftwf_plan fft_plan;
 
@@ -22,7 +20,8 @@ int main() {
     PaError err;
     graphBoundaries boundaries1;
     graphBoundaries boundaries2;
-    init(&boundaries1, &boundaries2);
+    Button button;
+    init(&boundaries1, &boundaries2, &button);
 
     AudioData data;
     data.maxFrameIndex = SAMPLE_COUNT;
@@ -41,20 +40,14 @@ int main() {
     float* time_domain = (float*) fftwf_malloc(sizeof(float) * SAMPLE_COUNT);
 
     fft_init(SAMPLE_COUNT, data.samples, fft_data, "fftw_wisdom.txt", &fft_plan);
-    signal_init(freq_domain, time_domain, 1500.0f);
 
-    int quit1 = 0;
-    int quit2 = 0;
+    int quit = 0;
+    int currentWindow = 1;
     SDL_Event event;
 
     pthread_mutex_init(&globalDataLock, NULL);
 
-    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit1, &quit2, &globalDataLock};
-    //updateArgs update_args = {&data, orderedData, &t, fft_data, spectrum, &quit1, &quit2, &globalDataLock, freq_domain, time_domain, fft_plan};
-
-    //pthread_t updateThread;
-
-    //pthread_create(&updateThread, NULL, updateDataPtr, &update_args);
+    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit, &globalDataLock, currentWindow, &button};
     
     err = Pa_Initialize();
     if (err != paNoError) goto error;
@@ -72,25 +65,20 @@ int main() {
     err = Pa_StartStream(stream);
     if (err != paNoError) goto error;
 
-    while (!quit1 || !quit2) {
+    while (!quit) {
         // Event handling
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
-                quit1 = 1;
-                quit2 = 1;
+                quit = 1;
             }
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE) {
-                if (event.window.windowID == SDL_GetWindowID(window1)) {
-                    SDL_DestroyWindow(window1);
-                    window1 = NULL;
-                    quit1 = 1;
-                }
-                if (event.window.windowID == SDL_GetWindowID(window2)) {
-                    SDL_DestroyWindow(window2);
-                    window2 = NULL;
-                    quit2 = 1;
-                }
-            }
+            if (event.type == SDL_MOUSEMOTION) {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                button.isHovered = isMouseOverButton(&button, x, y);
+            } 
+            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT && button.isHovered) {
+                button.onClick((void*)&loop_args);
+            } 
         }
         copySamplesInOrder(&data, orderedData);
         updateFFTData(fft_data, spectrum, SAMPLE_COUNT, fft_plan);
@@ -109,8 +97,6 @@ int main() {
 
     Pa_Terminate();
 
-    //pthread_join(updateThread, NULL);
-
     pthread_mutex_destroy(&globalDataLock);
     
     fftwf_destroy_plan(fft_plan);
@@ -121,13 +107,18 @@ int main() {
     free(time_domain);
     fftwf_free(fft_data);
     fftwf_free(freq_domain);
-    if (renderer1) SDL_DestroyRenderer(renderer1);
-    if (renderer2) SDL_DestroyRenderer(renderer2);
-    if (window1) SDL_DestroyWindow(window1);
-    if (window2) SDL_DestroyWindow(window2);
+    SDL_DestroyRenderer(main_renderer);
+    SDL_DestroyWindow(main_window);
     SDL_Quit();
     return 0;
 error:
+    if (data.samples) free(data.samples);
+    if (orderedData) free(orderedData);
+    if (fft_data) fftwf_free(fft_data);
+    if (spectrum) free(spectrum);
+    if (freq_domain) fftwf_free(freq_domain);
+    if (time_domain) free(time_domain);
+    SDL_QUIT();
     Pa_Terminate();
     fprintf(stderr, "Ugh, there's an error : %s\n", Pa_GetErrorText(err));
     return -1;

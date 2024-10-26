@@ -85,7 +85,7 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
         //render text
         float x_val = boundaries.xInterval.min + i * (boundaries.xInterval.max - boundaries.xInterval.min) / NUM_TICKS;
         char label[10];
-        snprintf(label, sizeof(label), "%.1f", x_val);
+        snprintf(label, sizeof(label), "%.2f", x_val);
 
         int text_height = 0;
         int text_width = 0;
@@ -107,7 +107,7 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
         //render text
         float y_val = boundaries.yInterval.min + i * (boundaries.yInterval.max - boundaries.yInterval.min) / NUM_TICKS;
         char label[10];
-        snprintf(label, sizeof(label), "%.1f", y_val);
+        snprintf(label, sizeof(label), "%.2f", y_val);
 
         int text_height = 0;
         int text_width = 0;
