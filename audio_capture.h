@@ -1,5 +1,9 @@
 #include <portaudio.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sndfile.h>
 
 #ifndef AUDIO_DATA
 #define AUDIO_DATA

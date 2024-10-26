@@ -14,7 +14,5 @@ void updateFFTData(fftwf_complex* fft_data, float* spectrum, int size, fftwf_pla
     // update spectrum
     for (int i = 0; i < size; i++){
         spectrum[i] = sqrt(fft_data[i][0] * fft_data[i][0] + fft_data[i][1] * fft_data[i][1]); // magnitude
-        ////remove the noise
-        //if (spectrum[i] < 1.0f) spectrum[i] = 0.0f;
     }
 }
