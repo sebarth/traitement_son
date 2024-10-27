@@ -8,7 +8,8 @@ SDL_Window* main_window;
 SDL_Renderer* main_renderer;
 
 TTF_Font* font;
-TTF_Font* textFont;
+TTF_Font* buttonFont;
+TTF_Font* legendFont;
 
 fftwf_plan fft_plan;
 
@@ -29,15 +30,57 @@ int main() {
     float *orderedData;
 
     data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    if (data.samples == NULL){
+        fprintf(stderr, "Malloc failed for data.samples\n");
+        return -1;
+    }
     orderedData = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    if (orderedData == NULL){
+        fprintf(stderr, "Malloc failed for orderedData\n");
+        free(data.samples); // Free previously allocated memory
+        return -1;
+    }
 
     float t = 0;
 
     fftwf_complex *fft_data = (fftwf_complex*)fftwf_malloc(SAMPLE_COUNT * sizeof(fftwf_complex));
+    if (fft_data == NULL){
+        fprintf(stderr, "Malloc failed for fft_data\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        return -1;
+    }
+
     float *spectrum = malloc(SAMPLE_COUNT * sizeof(float));
+    if (spectrum == NULL){
+        fprintf(stderr, "Malloc failed for spectrum\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        fftwf_free(fft_data); // Free previously allocated memory
+        return -1;
+    }
 
     fftwf_complex* freq_domain = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * SAMPLE_COUNT);
+    if (freq_domain == NULL){
+        fprintf(stderr, "Malloc failed for freq_domain\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        fftwf_free(fft_data); // Free previously allocated memory
+        free(spectrum); // Free previously allocated memory
+        return -1;
+    }
+    
     float* time_domain = (float*) fftwf_malloc(sizeof(float) * SAMPLE_COUNT);
+    if (time_domain == NULL){
+        fprintf(stderr, "Malloc failed for time_domain\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        fftwf_free(fft_data); // Free previously allocated memory
+        free(spectrum); // Free previously allocated memory
+        fftwf_free(freq_domain); // Free previously allocated memory
+        return -1;
+    }
+    printf("Everything correctly allocated\n");
 
     fft_init(SAMPLE_COUNT, data.samples, fft_data, "fftw_wisdom.txt", &fft_plan);
 
@@ -47,7 +90,7 @@ int main() {
 
     pthread_mutex_init(&globalDataLock, NULL);
 
-    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit, &globalDataLock, currentWindow, &button};
+    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit, &globalDataLock, currentWindow, &button, {255, 0, 0, 255}, {0, 0, 255, 255}};
     
     err = Pa_Initialize();
     if (err != paNoError) goto error;
@@ -118,7 +161,7 @@ error:
     if (spectrum) free(spectrum);
     if (freq_domain) fftwf_free(freq_domain);
     if (time_domain) free(time_domain);
-    SDL_QUIT();
+    SDL_Quit();
     Pa_Terminate();
     fprintf(stderr, "Ugh, there's an error : %s\n", Pa_GetErrorText(err));
     return -1;

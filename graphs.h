@@ -31,7 +31,7 @@ typedef struct {
 } graphBoundaries;
 #endif // GRAPH_BOUNDARIES
 
-void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y);
+void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color color);
 float dataMax(float* data, int size);
 float dataMin(float* data, int size);
 float maxAbs(float a, float b);
