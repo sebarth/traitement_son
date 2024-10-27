@@ -1,6 +1,7 @@
 #include <fftw3.h>
 #include <SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include "graphs.h"
@@ -17,7 +18,7 @@
 #define SAMPLE_CONSTS
 
 #define SAMPLE_RATE 44100
-#define SAMPLE_COUNT SAMPLE_RATE * 1
+#define SAMPLE_COUNT SAMPLE_RATE 
 #define FRAMES_PER_BUFFER 256
 
 #endif // SAMPLE_CONSTS
@@ -82,7 +83,7 @@ typedef struct{
     int* quit;
     pthread_mutex_t* globalDataLock;
     int currentWindow; // value is 1 or 2
-    Button* button;
+    Button* changeWindowButton;
     SDL_Color color1;
     SDL_Color color2;
 } loopArgs;

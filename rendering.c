@@ -1,6 +1,6 @@
 #include "rendering.h"
 
-void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button){
+void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* changeWindowButton){
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     main_window = SDL_CreateWindow("Amplitude Graph", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
@@ -27,89 +27,33 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* bu
     boundaries2->yInterval.min = 0.0f;
     boundaries2->yInterval.max = 1.0f;
 
-    button->rect = (SDL_Rect){WIDTH / 2 - 75, HEIGHT - MARGIN_HEIGHT + 50, 150, 50};
+    changeWindowButton->rect = (SDL_Rect){WIDTH / 2 - 75, HEIGHT - MARGIN_HEIGHT + 50, 150, 25};
     //grey color
-    button->bgColor = (SDL_Color){200, 200, 200, 255};
+    changeWindowButton->bgColor = (SDL_Color){200, 200, 200, 255};
     //darker grey color
-    button->hoverColor = (SDL_Color){175, 175, 175, 255};
-    button->text = "Switch Graph";
-    button->isHovered = false;
-    button->onClick = &onButtonClick;
+    changeWindowButton->hoverColor = (SDL_Color){175, 175, 175, 255};
+    changeWindowButton->text = "Switch Graph";
+    changeWindowButton->isHovered = false;
+    changeWindowButton->onClick = &onButtonClick;
 }
 
-void drawRoundedRect(SDL_Renderer *renderer, SDL_Rect rect, int radius, SDL_Color color) {
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-
-    // Draw the central rectangle
-    SDL_Rect centralRect = {rect.x + radius, rect.y, rect.w - 2 * radius, rect.h};
-    SDL_RenderFillRect(renderer, &centralRect);
-
-    // Draw the left and right rectangles
-    SDL_Rect leftRect = {rect.x, rect.y + radius, radius, rect.h - 2 * radius};
-    SDL_Rect rightRect = {rect.x + rect.w - radius, rect.y + radius, radius, rect.h - 2 * radius};
-    SDL_RenderFillRect(renderer, &leftRect);
-    SDL_RenderFillRect(renderer, &rightRect);
-
-    // Draw the four corners
-    for (int w = 0; w < radius * 2; w++) {
-        for (int h = 0; h < radius * 2; h++) {
-            int dx = radius - w; // horizontal offset
-            int dy = radius - h; // vertical offset
-            if ((dx*dx + dy*dy) <= (radius * radius)) {
-                SDL_RenderDrawPoint(renderer, rect.x + radius + dx, rect.y + radius + dy); // top-left
-                SDL_RenderDrawPoint(renderer, rect.x + rect.w - radius + dx, rect.y + radius + dy); // top-right
-                SDL_RenderDrawPoint(renderer, rect.x + radius + dx, rect.y + rect.h - radius + dy); // bottom-left
-                SDL_RenderDrawPoint(renderer, rect.x + rect.w - radius + dx, rect.y + rect.h - radius + dy); // bottom-right
-            }
-        }
-    }
-}
-
-void drawRoundedRectWithBorder(SDL_Renderer *renderer, SDL_Rect rect, int radius, SDL_Color fillColor, SDL_Color borderColor) {
-    // Draw the filled rounded rectangle
-    drawRoundedRect(renderer, rect, radius, fillColor);
-
-    // Draw the border
-    SDL_SetRenderDrawColor(renderer, borderColor.r, borderColor.g, borderColor.b, borderColor.a);
-   
-    int numPoints = 100; // Number of points to use for the circle
-    double angleStep = M_PI_2 / numPoints; // Step size for each point (90 degrees divided by numPoints)
-
-    for (int i = 0; i <= numPoints; i++) {
-        double angle = i * angleStep;
-        int dx = (int)(radius * cos(angle));
-        int dy = (int)(radius * sin(angle));
-        
-        // Draw the four corners
-        SDL_RenderDrawPoint(renderer, rect.x + radius - dx, rect.y + radius - dy); // top-left
-        SDL_RenderDrawPoint(renderer, rect.x + rect.w - radius + dx, rect.y + radius - dy); // top-right
-        SDL_RenderDrawPoint(renderer, rect.x + radius - dx, rect.y + rect.h - radius + dy); // bottom-left
-        SDL_RenderDrawPoint(renderer, rect.x + rect.w - radius + dx, rect.y + rect.h - radius + dy); // bottom-right
-    }
-
-    // Draw the horizontal and vertical lines
-    SDL_RenderDrawLine(renderer, rect.x + radius, rect.y, rect.x + rect.w - radius, rect.y); // top
-    SDL_RenderDrawLine(renderer, rect.x + radius, rect.y + rect.h, rect.x + rect.w - radius, rect.y + rect.h); // bottom
-    SDL_RenderDrawLine(renderer, rect.x, rect.y + radius, rect.x, rect.y + rect.h - radius); // left
-    SDL_RenderDrawLine(renderer, rect.x + rect.w, rect.y + radius, rect.x + rect.w, rect.y + rect.h - radius); // right
-}
-
-void renderButton(SDL_Renderer* renderer, Button* button) {
+void renderButton(SDL_Renderer* renderer, Button* changeWindowButton) {
     SDL_Color bgColor;
-    if (button->isHovered) {
-        bgColor = button->hoverColor;
+    if (changeWindowButton->isHovered) {
+        bgColor = changeWindowButton->hoverColor;
     } else {
-        bgColor = button->bgColor;
+        bgColor = changeWindowButton->bgColor;
     }
-    drawRoundedRectWithBorder(main_renderer, button->rect, 10, bgColor, (SDL_Color){0, 0, 0, 255});
-    int text_height = 0;
+    roundedBoxRGBA(renderer, changeWindowButton->rect.x, changeWindowButton->rect.y, changeWindowButton->rect.x + changeWindowButton->rect.w, changeWindowButton->rect.y + changeWindowButton->rect.h, 12, bgColor.r, bgColor.g, bgColor.b, bgColor.a);
+	roundedRectangleRGBA(renderer, changeWindowButton->rect.x, changeWindowButton->rect.y, changeWindowButton->rect.x + changeWindowButton->rect.w, changeWindowButton->rect.y + changeWindowButton->rect.h, 12, 0, 0, 0, 255);
+	int text_height = 0;
     int text_width = 0;
-    TTF_SizeText(font, button->text, &text_width, &text_height);
-    drawText(renderer, buttonFont, button->text, button->rect.x + button->rect.w / 2 - text_width / 2, button->rect.y + button->rect.h / 2 - text_height / 2, button->textColor);
+    TTF_SizeText(font, changeWindowButton->text, &text_width, &text_height);
+    drawText(renderer, buttonFont, changeWindowButton->text, changeWindowButton->rect.x + changeWindowButton->rect.w / 2 - text_width / 2, changeWindowButton->rect.y + changeWindowButton->rect.h / 2 - text_height / 2, changeWindowButton->textColor);
 }
 
-bool isMouseOverButton(Button *button, int mouseX, int mouseY) {
-    return (mouseX >= button->rect.x && mouseX <= button->rect.x + button->rect.w && mouseY >= button->rect.y && mouseY <= button->rect.y + button->rect.h);
+bool isMouseOverButton(Button *changeWindowButton, int mouseX, int mouseY) {
+    return (mouseX >= changeWindowButton->rect.x && mouseX <= changeWindowButton->rect.x + changeWindowButton->rect.w && mouseY >= changeWindowButton->rect.y && mouseY <= changeWindowButton->rect.y + changeWindowButton->rect.h);
 }
 
 void onButtonClick(void* v_args) {
@@ -138,7 +82,7 @@ void loop(loopArgs args){
 
         SDL_SetRenderDrawColor(main_renderer, args.color1.r, args.color1.g, args.color1.b, args.color1.a);
         drawGraph(main_renderer, args.orderedData, SAMPLE_COUNT, *(args.boundaries1), font);
-        renderButton(main_renderer, args.button);
+        renderButton(main_renderer, args.changeWindowButton);
         
         SDL_RenderPresent(main_renderer);
     }
@@ -154,7 +98,7 @@ void loop(loopArgs args){
 
         SDL_SetRenderDrawColor(main_renderer, args.color2.r, args.color2.g, args.color2.b, args.color2.a);
         drawGraph(main_renderer, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), font);
-        renderButton(main_renderer, args.button);
+        renderButton(main_renderer, args.changeWindowButton);
 
         SDL_RenderPresent(main_renderer);
     }

@@ -1,27 +1,5 @@
 #include "audio_capture.h"
 
-void exportToWav(const char *filename, float *data, int numFrames, int sampleRate) {
-    // Define the format of the WAV file
-    SF_INFO sfinfo;
-    sfinfo.frames = numFrames;
-    sfinfo.samplerate = sampleRate;
-    sfinfo.channels = 1; // Mono
-    sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-
-    // Open the output file
-    SNDFILE *outfile = sf_open(filename, SFM_WRITE, &sfinfo);
-    if (!outfile) {
-        fprintf(stderr, "Error opening output file '%s': %s\n", filename, sf_strerror(NULL));
-        return;
-    }
-
-    // Write the data to the file
-    sf_write_float(outfile, data, numFrames);
-
-    // Close the file
-    sf_close(outfile);
-}
-
 void copySamplesInOrder(AudioData *data, float *orderedSamples) {
     int start = data->currentIndex;
     int size = data->maxFrameIndex;

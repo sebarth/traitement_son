@@ -21,8 +21,8 @@ int main() {
     PaError err;
     graphBoundaries boundaries1;
     graphBoundaries boundaries2;
-    Button button;
-    init(&boundaries1, &boundaries2, &button);
+    Button changeWindowButton;
+    init(&boundaries1, &boundaries2, &changeWindowButton);
 
     AudioData data;
     data.maxFrameIndex = SAMPLE_COUNT;
@@ -90,7 +90,7 @@ int main() {
 
     pthread_mutex_init(&globalDataLock, NULL);
 
-    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit, &globalDataLock, currentWindow, &button, {255, 0, 0, 255}, {0, 0, 255, 255}};
+    loopArgs loop_args = {&boundaries1, &boundaries2, &data, orderedData, fft_data, spectrum, &t, &quit, &globalDataLock, currentWindow, &changeWindowButton, {255, 0, 0, 255}, {0, 0, 255, 255}};
     
     err = Pa_Initialize();
     if (err != paNoError) goto error;
@@ -117,10 +117,10 @@ int main() {
             if (event.type == SDL_MOUSEMOTION) {
                 int x, y;
                 SDL_GetMouseState(&x, &y);
-                button.isHovered = isMouseOverButton(&button, x, y);
+                changeWindowButton.isHovered = isMouseOverButton(&changeWindowButton, x, y);
             } 
-            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT && button.isHovered) {
-                button.onClick((void*)&loop_args);
+            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT && changeWindowButton.isHovered) {
+                changeWindowButton.onClick((void*)&loop_args);
             } 
         }
         copySamplesInOrder(&data, orderedData);
