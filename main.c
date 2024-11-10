@@ -1,3 +1,6 @@
+#include "libs.h"
+#include "constants.h"
+#include "cross_platform.h"
 #include "graphs.h"
 #include "fft.h"
 #include "rendering.h"
@@ -16,7 +19,7 @@ fftwf_plan fft_plan;
 float* orderedData;
 pthread_mutex_t globalDataLock;
 
-int main() {
+int main_function() {
     PaStream *stream;
     PaError err;
     graphBoundaries boundaries1;
@@ -165,4 +168,14 @@ error:
     Pa_Terminate();
     fprintf(stderr, "Ugh, there's an error : %s\n", Pa_GetErrorText(err));
     return -1;
+}
+// if windows, main_function is WinMain, else main_function is main 
+#ifdef _WIN32
+#define ENTRY_POINT WinMain
+#else
+#define ENTRY_POINT main
+#endif
+
+int ENTRY_POINT (){
+    return main_function();
 }
