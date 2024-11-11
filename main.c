@@ -171,11 +171,11 @@ error:
 }
 // if windows, main_function is WinMain, else main_function is main 
 #ifdef _WIN32
-#define ENTRY_POINT WinMain
-#else
-#define ENTRY_POINT main
-#endif
-
-int ENTRY_POINT (){
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     return main_function();
 }
+#else
+int main(int argc, char* argv[]) {
+    return main_function();
+}
+#endif

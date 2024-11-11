@@ -17,11 +17,13 @@ typedef HANDLE pthread_t;
 //pthread mutex type
 typedef CRITICAL_SECTION pthread_mutex_t;
 //pthread mutex init
-#define pthread_mutex_init InitializeCriticalSection
+#define pthread_mutex_init(mutex, ptr) InitializeCriticalSection(mutex)
 //pthread mutex lock
 #define pthread_mutex_lock EnterCriticalSection
 //pthread mutex unlock
 #define pthread_mutex_unlock LeaveCriticalSection
+//pthread mutex destroy
+#define pthread_mutex_destroy DeleteCriticalSection
 
 #else
 

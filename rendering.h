@@ -4,6 +4,7 @@
 #include "libs.h"
 #include "graphs.h"
 #include "constants.h"
+#include "cross_platform.h"
 
 typedef struct {
     SDL_Rect rect;
@@ -24,7 +25,7 @@ typedef struct{
     float* spectrum;
     float* t;
     int* quit;
-    pthread_mutex_t* globalDataLock;
+    pthread_mutex_t* globalData;
     int currentWindow; // value is 1 or 2
     Button* changeWindowButton;
     SDL_Color color1;
