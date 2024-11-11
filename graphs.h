@@ -1,35 +1,12 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#include <SDL.h> //graphs
-#include <SDL2/SDL_ttf.h> //texts
-#include <math.h>
-#include <stdlib.h>
-
-#ifndef WINDOW_CONSTANTS
-#define WINDOW_CONSTANTS
-
-#define WIDTH 1440
-#define HEIGHT 800
-
-#endif // WINDOW_CONSTANTS
+#include "libs.h"
+#include "constants.h"
 
 #define MARGIN_WIDTH 150
 #define MARGIN_HEIGHT 150
 #define NUM_TICKS 10 //for axes
-
-#ifndef GRAPH_BOUNDARIES
-#define GRAPH_BOUNDARIES
-typedef struct {
-    float min;
-    float max;
-} Interval;
-
-typedef struct {
-    Interval xInterval;
-    Interval yInterval;
-} graphBoundaries;
-#endif // GRAPH_BOUNDARIES
 
 void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color color);
 float dataMax(float* data, int size);

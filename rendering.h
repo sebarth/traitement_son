@@ -1,66 +1,10 @@
-#include <fftw3.h>
-#include <SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL2_gfxPrimitives.h>
-#include <unistd.h>
-#include <stdbool.h>
+#ifndef RENDERING_H
+#define RENDERING_H
+
+#include "libs.h"
 #include "graphs.h"
-
-#ifndef WINDOW_CONSTANTS
-#define WINDOW_CONSTANTS
-
-#define WIDTH 1000
-#define HEIGHT 800
-
-#endif // WINDOW_CONSTANTS
-
-#ifndef SAMPLE_CONSTS
-#define SAMPLE_CONSTS
-
-#define SAMPLE_RATE 44100
-#define SAMPLE_COUNT SAMPLE_RATE 
-#define FRAMES_PER_BUFFER 256
-
-#endif // SAMPLE_CONSTS
-
-#ifndef WINDOWS
-#define WINDOWS
-
-extern SDL_Window* main_window;
-
-extern SDL_Renderer* main_renderer;
-
-extern TTF_Font* font;
-extern TTF_Font* buttonFont;
-extern TTF_Font* legendFont;
-
-#endif // WINDOWS
-
-#ifndef AUDIO_DATA
-#define AUDIO_DATA
-
-typedef struct {
-    float *samples;
-    int maxFrameIndex;
-    int currentIndex;
-} AudioData;
-
-#endif // AUDIO_DATA
-
-#ifndef GRAPH_BOUNDARIES
-#define GRAPH_BOUNDARIES
-
-typedef struct {
-    float min;
-    float max;
-} Interval;
-
-typedef struct {
-    Interval xInterval;
-    Interval yInterval;
-} graphBoundaries;
-
-#endif // GRAPH_BOUNDARIES
+#include "constants.h"
+#include "cross_platform.h"
 
 typedef struct {
     SDL_Rect rect;
@@ -81,7 +25,7 @@ typedef struct{
     float* spectrum;
     float* t;
     int* quit;
-    pthread_mutex_t* globalDataLock;
+    pthread_mutex_t* globalData;
     int currentWindow; // value is 1 or 2
     Button* changeWindowButton;
     SDL_Color color1;
@@ -93,3 +37,5 @@ void loop(loopArgs args);
 void renderButton(SDL_Renderer* renderer, Button* button);
 bool isMouseOverButton(Button* button, int mouseX, int mouseY);
 void onButtonClick(void* v_args);
+
+#endif // RENDERING_H

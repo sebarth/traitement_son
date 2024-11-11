@@ -1,28 +1,9 @@
-#include <portaudio.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef AUDIO_CAPTURE_H
+#define AUDIO_CAPTURE_H
 
-#ifndef AUDIO_DATA
-#define AUDIO_DATA
-
-typedef struct {
-    float *samples;
-    int maxFrameIndex;
-    int currentIndex;
-} AudioData;
-
-#endif //AUDIO_DATA
-
-#ifndef SAMPLE_CONSTS
-#define SAMPLE_CONSTS
-
-#define SAMPLE_RATE  10000
-#define SAMPLE_COUNT SAMPLE_RATE * 1
-#define FRAMES_PER_BUFFER 256
-
-#endif // SAMPLE_CONSTS
+#include "libs.h"
+#include "cross_platform.h"
+#include "constants.h"
 
 extern pthread_mutex_t globalDataLock;
 extern float* orderedData;
@@ -33,3 +14,5 @@ int customAudioCallback(const void *inputBuffer, void *outputBuffer,
                          PaStreamCallbackFlags statusFlags,
                          void *userData);
 void copySamplesInOrder(AudioData *data, float *orderedSamples);
+
+#endif // AUDIO_CAPTURE_H
