@@ -1,9 +1,13 @@
 CC = gcc
 CFLAGS = 
-LDFLAGS = -lm -lfftw3f -lportaudio -lSDL2 -lSDL2_ttf -lSDL2_gfx -lfreetype
+LDFLAGS = -lm -lfftw3f -lportaudio -lSDL2 -lSDL2_ttf -lSDL2_gfx -lfreetype -Wall -Werror
 TARGET = audio_processing
-SRCS = audio_capture.c fft.c graphs.c rendering.c main.c
-OBJS = $(SRCS:.c=.o)
+SRC_PATH = src/
+FONT_PATH = fonts/
+SRC_FILES = audio_capture.c fft.c graphs.c rendering.c main.c
+FONT_FILES = Roboto-Italic.c Roboto-Regular.c Roboto-Light.c
+SRC = $(addprefix $(SRC_PATH), $(SRC_FILES)) $(addprefix $(FONT_PATH), $(FONT_FILES))
+OBJS = $(SRC:.c=.o)
 
 # Cross-compilation settings
 CC_WIN = x86_64-w64-mingw32-gcc
@@ -12,7 +16,7 @@ CFLAGS_WIN = -I/usr/local/x86_64-w64-mingw32/include \
 LDFLAGS_WIN = -static -L/usr/local/x86_64-w64-mingw32/lib \
 			-L/usr/x86_64-w64-mingw32/lib \
 			-lm -lfftw3f -lpthread -lportaudio -lSDL2_gfx -lSDL2 -lSDL2_ttf -lmingw32 -lmsvcrt \
-			-lwinmm -limm32 -lole32 -loleaut32 -luuid -lsetupapi -lversion -lgdi32 -lrpcrt4
+			-lwinmm -limm32 -lole32 -loleaut32 -luuid -lsetupapi -lversion -lgdi32 -lrpcrt4 -mwindows -Wall -Werror
 TARGET_WIN = audio_processing.exe
 
 all: $(TARGET)

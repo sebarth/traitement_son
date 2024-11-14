@@ -1,10 +1,10 @@
 #include "fft.h"
 
 void fft_init(int size, float* in, fftwf_complex* out, char* file, fftwf_plan* plan) {
-    if (file != NULL) { 
-        fftwf_import_wisdom_from_filename(file);
-    }
-    *plan = fftwf_plan_dft_r2c_1d(size, in, out, FFTW_PATIENT);
+    // if (file != NULL) { 
+    //     fftwf_import_wisdom_from_filename(file);
+    // }
+    *plan = fftwf_plan_dft_r2c_1d(size, in, out, FFTW_ESTIMATE);
     // fftwf_export_wisdom_to_filename(file);
 }
 
