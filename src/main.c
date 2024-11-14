@@ -83,7 +83,6 @@ int main_function() {
         fftwf_free(freq_domain); // Free previously allocated memory
         return -1;
     }
-    printf("Everything correctly allocated\n");
 
     fft_init(SAMPLE_COUNT, data.samples, fft_data, "fftw_wisdom.txt", &fft_plan);
 

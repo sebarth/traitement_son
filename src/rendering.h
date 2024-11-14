@@ -5,7 +5,19 @@
 #include "graphs.h"
 #include "constants.h"
 #include "cross_platform.h"
+#include "fonts.h"
 
+/*
+Button is a struct that represents a button on the screen.
+rect : the place where the button is drawn
+bgColor : the color of the button when it's not hovered
+hoverColor : the color of the button when it's hovered
+textColor : the color of the text on the button
+text : the text on the button
+isHovered : whether the mouse is over the button
+onClick : the function pointer that is called when the button is clicked; 
+is supposed to be a loopArgs pointer type, but it's not defined yet 
+*/
 typedef struct {
     SDL_Rect rect;
     SDL_Color bgColor;

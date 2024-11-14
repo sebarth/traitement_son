@@ -7,9 +7,14 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* ch
     
     main_renderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_PRESENTVSYNC);
 
-    font = TTF_OpenFont("fonts/Roboto-Light.ttf", 16);
-    buttonFont = TTF_OpenFont("fonts/Roboto-Regular.ttf", 16);
-	legendFont = TTF_OpenFont("fonts/Roboto-Italic.ttf", 16);
+    SDL_RWops* rw_RobotoLight = SDL_RWFromMem(fonts_Roboto_Light_ttf, fonts_Roboto_Light_ttf_len);
+    font = TTF_OpenFontRW(rw_RobotoLight, 1, 16);
+
+    SDL_RWops* rw_RobotoRegular = SDL_RWFromMem(fonts_Roboto_Regular_ttf, fonts_Roboto_Regular_ttf_len);
+    buttonFont = TTF_OpenFontRW(rw_RobotoRegular, 1, 16);
+
+    SDL_RWops* rw_RobotoItalic = SDL_RWFromMem(fonts_Roboto_Italic_ttf, fonts_Roboto_Italic_ttf_len);
+    legendFont = TTF_OpenFontRW(rw_RobotoItalic, 1, 16);
 
     SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 255); // Set to white background
     SDL_RenderClear(main_renderer);
@@ -56,8 +61,8 @@ bool isMouseOverButton(Button *changeWindowButton, int mouseX, int mouseY) {
     return (mouseX >= changeWindowButton->rect.x && mouseX <= changeWindowButton->rect.x + changeWindowButton->rect.w && mouseY >= changeWindowButton->rect.y && mouseY <= changeWindowButton->rect.y + changeWindowButton->rect.h);
 }
 
-void onButtonClick(void* v_args) {
-    loopArgs* args = (loopArgs*)v_args;
+void onButtonClick(void* void_args) {
+    loopArgs* args = (loopArgs*)void_args;
     if (args->currentWindow == 1) {
         args->currentWindow = 2;
         SDL_SetWindowTitle(main_window, "Spectrum Graph");
