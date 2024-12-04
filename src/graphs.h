@@ -11,9 +11,9 @@
 void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color color);
 float dataMax(float* data, int size);
 float dataMin(float* data, int size);
-float maxAbs(float a, float b);
 void getCoords(float coords[2], graphBoundaries boundaries);
 void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font);
-void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font);
+void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* legendy);
+void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, char* legendx, char* legendy);
 
 #endif // GRAPHS_H

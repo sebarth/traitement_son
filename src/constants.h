@@ -13,6 +13,8 @@ typedef struct {
 #define SAMPLE_RATE  44100
 #define SAMPLE_COUNT SAMPLE_RATE * 1
 #define FRAMES_PER_BUFFER 256
+#define NOISE_FLOOR 1e-3
+#define LOG_NOISE_FLOOR -3.0f
 
 // Graph boundaries
 typedef struct {
@@ -38,10 +40,6 @@ typedef struct {
 extern SDL_Window* main_window;
 
 extern SDL_Renderer* main_renderer;
-
-extern TTF_Font* font;
-extern TTF_Font* buttonFont;
-extern TTF_Font* legendFont;
 
 // Window constants
 #define WIDTH 1440

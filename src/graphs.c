@@ -1,6 +1,10 @@
 #include "graphs.h"
 
 void drawText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color color) {
+    if (font == NULL) {
+        fprintf(stderr, "Font not loaded correctly.\n");
+        return;  // Or handle the error more gracefully
+    }
     SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
 
@@ -34,11 +38,6 @@ float dataMin(float* data, int size) {
     return min;
 }
 
-float maxAbs(float a, float b){
-    // returns the max absolute value
-    return (fabsf(a) > fabsf(b)) ? fabsf(a) : fabsf(b);
-}
-
 void getCoords(float coords[2], graphBoundaries boundaries){
     int graph_width = WIDTH - 2*MARGIN_WIDTH;
     int graph_margin_width = (graph_width) / 20;
@@ -64,13 +63,7 @@ void getCoords(float coords[2], graphBoundaries boundaries){
     return;
 }
 
-void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font){
-    //draw axes
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT);
-    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
-    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
-    SDL_RenderDrawLine(renderer, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
+void drawTicks(SDL_Renderer* renderer, graphBoundaries boundaries, TTF_Font* font){
     for (int i = 0; i <= NUM_TICKS; i++) {
         float tick_coords_d[2] = {boundaries.xInterval.min + i*(boundaries.xInterval.max - boundaries.xInterval.min)/NUM_TICKS, (float) (HEIGHT - MARGIN_HEIGHT)};
         getCoords(tick_coords_d, boundaries);
@@ -85,10 +78,16 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
         float x_val = boundaries.xInterval.min + i * (boundaries.xInterval.max - boundaries.xInterval.min) / NUM_TICKS;
         char label[10];
         snprintf(label, sizeof(label), "%.2f", x_val);
+        printf("%s\n", label);
 
         int text_height = 0;
         int text_width = 0;
-        TTF_SizeText(font, label, &text_width, &text_height);
+        if (!font) {
+            fprintf(stderr, "Font pointer is NULL in drawTicks\n");
+            return;
+        }
+        int error = TTF_SizeUTF8(font, label, &text_width, &text_height);
+        printf("%d %d\n", text_width, text_height);
 
         drawText(renderer, font, label, tick_coords[0] - text_width/2, HEIGHT - MARGIN_HEIGHT + tick_size, (SDL_Color){0, 0, 0, 255});
     }
@@ -116,19 +115,34 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
     }
 }
 
-void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font) {
+void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font){
+    //draw axes
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT);
+    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
+    SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
+    SDL_RenderDrawLine(renderer, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
+    drawTicks(renderer, boundaries, font);
+}
+
+void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* legendy){
+    drawText(renderer, font, legendx, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT + 50, (SDL_Color){0, 0, 0, 255});
+    drawText(renderer, font, legendy, MARGIN_WIDTH - 50, MARGIN_HEIGHT, (SDL_Color){0, 0, 0, 255});
+}
+
+void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries){
     // graphs the inputted data.
-    float max_value = maxAbs(boundaries.yInterval.max, boundaries.yInterval.min);
-    float point1[2];
-    float point2[2];
-    float point2_temp[2];
+    // we draw a line between each pair of adjacent points
+    float point1[2]; // store the current first point
+    float point2[2]; // store the current second point
+    float point2_temp[2]; // store the previous point
     for (int i = 0; i < length - 1; i++) {
         // map data points to window size (scale to fit vertically)
         if(i == 0){
-            point1[0] = boundaries.xInterval.min;
-            point1[1] = data[0];
+            point1[0] = boundaries.xInterval.min; // start at the left edge
+            point1[1] = data[0]; // start at the first data point
         } else{
-            point1[0] = point2_temp[0];
+            point1[0] = point2_temp[0]; // start at the previous point
             point1[1] = point2_temp[1];
         }
         point2[0] = boundaries.xInterval.min + (i+1) * (boundaries.xInterval.max - boundaries.xInterval.min) / length;
@@ -145,5 +159,10 @@ void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries 
         // draw line between two adjacent points
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
     }
+}
+
+void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, char* legendx, char* legendy){
     drawBackground(renderer, data, length, boundaries, font);
+    drawLegend(renderer, font, legendx, legendy);
+    drawCurve(renderer, data, length, boundaries);
 }

@@ -2,6 +2,7 @@
 #define FFT_H
 
 #include "libs.h"
+#include "constants.h"
 
 extern fftwf_plan fft_plan;
 
