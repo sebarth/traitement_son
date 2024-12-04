@@ -78,16 +78,10 @@ void drawTicks(SDL_Renderer* renderer, graphBoundaries boundaries, TTF_Font* fon
         float x_val = boundaries.xInterval.min + i * (boundaries.xInterval.max - boundaries.xInterval.min) / NUM_TICKS;
         char label[10];
         snprintf(label, sizeof(label), "%.2f", x_val);
-        printf("%s\n", label);
 
         int text_height = 0;
         int text_width = 0;
-        if (!font) {
-            fprintf(stderr, "Font pointer is NULL in drawTicks\n");
-            return;
-        }
         int error = TTF_SizeUTF8(font, label, &text_width, &text_height);
-        printf("%d %d\n", text_width, text_height);
 
         drawText(renderer, font, label, tick_coords[0] - text_width/2, HEIGHT - MARGIN_HEIGHT + tick_size, (SDL_Color){0, 0, 0, 255});
     }
@@ -105,7 +99,7 @@ void drawTicks(SDL_Renderer* renderer, graphBoundaries boundaries, TTF_Font* fon
         //render text
         float y_val = boundaries.yInterval.min + i * (boundaries.yInterval.max - boundaries.yInterval.min) / NUM_TICKS;
         char label[10];
-        snprintf(label, sizeof(label), "%.2f", y_val);
+        snprintf(label, sizeof(label), "%.3f", y_val);
 
         int text_height = 0;
         int text_width = 0;
@@ -126,8 +120,8 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
 }
 
 void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* legendy){
-    drawText(renderer, font, legendx, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT + 50, (SDL_Color){0, 0, 0, 255});
-    drawText(renderer, font, legendy, MARGIN_WIDTH - 50, MARGIN_HEIGHT, (SDL_Color){0, 0, 0, 255});
+    drawText(renderer, font, legendx, WIDTH - MARGIN_WIDTH + 20, HEIGHT - MARGIN_HEIGHT, (SDL_Color){0, 0, 0, 255});
+    drawText(renderer, font, legendy, MARGIN_WIDTH - 50, MARGIN_HEIGHT - 20, (SDL_Color){0, 0, 0, 255});
 }
 
 void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries){
