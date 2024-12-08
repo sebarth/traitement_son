@@ -35,19 +35,23 @@ typedef struct{
     float* orderedData;
     fftwf_complex* fft_data;
     float* spectrum;
-    float* t;
     int* quit;
     pthread_mutex_t* globalData;
     int currentWindow; // value is 1 or 2
     Button* changeWindowButton;
     SDL_Color color1;
     SDL_Color color2;
+    TTF_Font* font;
+    TTF_Font* buttonFont;
+    TTF_Font* legendFont;
+    ViewType* currentView;
 } loopArgs;
 
-void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button);
+void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button, loopArgs* args);
 void loop(loopArgs args);
-void renderButton(SDL_Renderer* renderer, Button* button);
+void renderButton(SDL_Renderer* renderer, Button* button, TTF_Font* font);
 bool isMouseOverButton(Button* button, int mouseX, int mouseY);
 void onButtonClick(void* v_args);
+void changeView(loopArgs args, ViewType view);
 
 #endif // RENDERING_H

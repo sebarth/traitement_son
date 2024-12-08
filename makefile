@@ -4,7 +4,7 @@ LDFLAGS = -lm -lfftw3f -lportaudio -lSDL2 -lSDL2_ttf -lSDL2_gfx -lfreetype -Wall
 TARGET = audio_processing
 SRC_PATH = src/
 FONT_PATH = fonts/
-SRC_FILES = audio_capture.c fft.c graphs.c rendering.c main.c
+SRC_FILES = audio_capture.c math_tools.c graphs.c rendering.c main.c
 FONT_FILES = Roboto-Italic.c Roboto-Regular.c Roboto-Light.c
 SRC = $(addprefix $(SRC_PATH), $(SRC_FILES)) $(addprefix $(FONT_PATH), $(FONT_FILES))
 OBJS = $(SRC:.c=.o)
