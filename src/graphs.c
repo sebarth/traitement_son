@@ -155,8 +155,8 @@ void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries 
     }
 }
 
-void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, char* legendx, char* legendy){
+void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, TTF_Font* legend_font, char* legendx, char* legendy){
     drawBackground(renderer, data, length, boundaries, font);
-    drawLegend(renderer, font, legendx, legendy);
+    drawLegend(renderer, legend_font, legendx, legendy);
     drawCurve(renderer, data, length, boundaries);
 }

@@ -66,7 +66,7 @@ int main_function() {
     } else {
         memset(precomputed_hamming, 0, sizeof(float) * data.maxFrameIndex);
     }
-    smoothed_spectrum = (float*)malloc(sizeof(float) * data.maxFrameIndex / 2 + 1);
+    smoothed_spectrum = (float*)malloc(sizeof(float) * (data.maxFrameIndex / 2 + 1));
     if (smoothed_spectrum == NULL){
         fprintf(stderr, "Malloc failed for smoothed_spectrum\n");
         free(data.samples); // Free previously allocated memory
@@ -83,7 +83,7 @@ int main_function() {
     }
 
 
-    fftwf_complex *fft_data = (fftwf_complex*)fftwf_malloc(SAMPLE_COUNT * sizeof(fftwf_complex));
+    fftwf_complex *fft_data = fftwf_malloc(SAMPLE_COUNT * sizeof(fftwf_complex));
     if (fft_data == NULL){
         fprintf(stderr, "Malloc failed for fft_data\n");
         free(data.samples); // Free previously allocated memory
@@ -201,7 +201,6 @@ int main_function() {
                 }
             }
         }
-        printf("Current view: %d\n", currentView);
         copySamplesInOrder(&data, orderedData);
         updateFFTData(data.samples, precomputed_hamming, windowed_data, fft_data, spectrum, SAMPLE_COUNT, fft_plan);
         smoothSpectrum(spectrum, smoothed_spectrum, SAMPLE_COUNT, 10);
@@ -221,19 +220,43 @@ int main_function() {
     Pa_Terminate();
 
     pthread_mutex_destroy(&globalDataLock);
-    
     fftwf_destroy_plan(fft_plan);
-    fftwf_cleanup();
+
     if (spectrum) free(spectrum);
-    printf("Freeing memory\n");
     if (fft_data) fftwf_free(fft_data);
-    printf("Freeing memory\n");
     if (smoothed_spectrum) free(smoothed_spectrum);
     if (precomputed_hamming) free(precomputed_hamming);
     if (windowed_data) free(windowed_data);
     if (orderedData) free(orderedData);
     if (data.samples) free(data.samples);
 
+    fftwf_cleanup();
+
+    
+    if (font != NULL) TTF_CloseFont(font);
+    if (buttonFont != NULL) TTF_CloseFont(buttonFont);
+    if (legendFont != NULL) TTF_CloseFont(legendFont);
+    TTF_Quit();
+    SDL_DestroyRenderer(main_renderer);
+    SDL_DestroyWindow(main_window);
+    SDL_Quit();
+
+    return 0;
+pa_error:
+    Pa_Terminate();
+
+    pthread_mutex_destroy(&globalDataLock);
+    fftwf_destroy_plan(fft_plan);
+
+    if (spectrum) free(spectrum);
+    if (fft_data) fftwf_free(fft_data);
+    if (smoothed_spectrum) free(smoothed_spectrum);
+    if (precomputed_hamming) free(precomputed_hamming);
+    if (windowed_data) free(windowed_data);
+    if (orderedData) free(orderedData);
+    if (data.samples) free(data.samples);
+
+    fftwf_cleanup();
     TTF_CloseFont(font);
     TTF_CloseFont(buttonFont);
     TTF_CloseFont(legendFont);
@@ -242,16 +265,7 @@ int main_function() {
     SDL_DestroyWindow(main_window);
     SDL_Quit();
 
-    return 0;
-pa_error:
-    if (data.samples) free(data.samples);
-    if (orderedData) free(orderedData);
-    if (fft_data) fftwf_free(fft_data);
-    if (spectrum) free(spectrum);
-    SDL_Quit();
-    Pa_Terminate();
-    fprintf(stderr, "PortAudio error : %s\n", Pa_GetErrorText(err));
-    return -1;
+    return err;
 }
 // if windows, main_function is WinMain, else main_function is main 
 #ifdef _WIN32

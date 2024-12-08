@@ -115,7 +115,7 @@ void input_view(loopArgs args){
     SDL_RenderClear(main_renderer);
 
     SDL_SetRenderDrawColor(main_renderer, args.color1.r, args.color1.g, args.color1.b, args.color1.a);
-    drawGraph(main_renderer, args.orderedData, SAMPLE_COUNT, *(args.boundaries1), args.font, "Time (ms)", "Amplitude (Arbitrary unit)");
+    drawGraph(main_renderer, args.orderedData, SAMPLE_COUNT, *(args.boundaries1), args.font, args.legendFont, "Time (ms)", "Amplitude (Arbitrary unit)");
     renderButton(main_renderer, args.changeWindowButton, args.buttonFont);
     
     SDL_RenderPresent(main_renderer);
@@ -128,7 +128,7 @@ void spectrum_view(loopArgs args){
     SDL_RenderClear(main_renderer);
 
     SDL_SetRenderDrawColor(main_renderer, args.color2.r, args.color2.g, args.color2.b, args.color2.a);
-    drawGraph(main_renderer, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), args.font, "Frequency (Hz)", "Magnitude");
+    drawGraph(main_renderer, args.spectrum, SAMPLE_COUNT / 2 + 1, *(args.boundaries2), args.font, args.legendFont, "Frequency (Hz)", "Magnitude");
     renderButton(main_renderer, args.changeWindowButton, args.buttonFont);
 
     SDL_RenderPresent(main_renderer);

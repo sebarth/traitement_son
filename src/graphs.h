@@ -14,6 +14,6 @@ float dataMin(float* data, int size);
 void getCoords(float coords[2], graphBoundaries boundaries);
 void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font);
 void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* legendy);
-void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, char* legendx, char* legendy);
+void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, TTF_Font* legend_font, char* legendx, char* legendy);
 
 #endif // GRAPHS_H

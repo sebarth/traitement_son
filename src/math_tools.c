@@ -27,7 +27,7 @@ void updateFFTData(float* data, float* hamming, float* windowed_data, fftwf_comp
     fftwf_execute(fft_plan);
 
     // update spectrum
-    for (int i = 0; i < size; i++){
+    for (int i = 0; i < size / 2 + 1; i++){
         spectrum[i] = sqrt((float) fft_data[i][0] * fft_data[i][0] + (float) fft_data[i][1] * fft_data[i][1]); // magnitude
         // scaling
         spectrum[i] /= size;
@@ -40,12 +40,13 @@ void updateFFTData(float* data, float* hamming, float* windowed_data, fftwf_comp
 }
 
 void smoothSpectrum(float* spectrum, float* smoothed, int size, int window_size) {
+    int spectrum_size = size / 2 + 1;
     int half_window = window_size / 2;
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < spectrum_size; i++) {
         smoothed[i] = 0.0f;
         int count = 0;
         for (int j = -half_window; j <= half_window; j++) {
-            if (i + j >= 0 && i + j < size) {
+            if (i + j >= 0 && i + j < spectrum_size) {
                 smoothed[i] += spectrum[i + j];
                 count++;
             }
