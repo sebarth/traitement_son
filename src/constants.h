@@ -47,11 +47,10 @@ extern SDL_Renderer* main_renderer;
 
 // Handle different views
 typedef enum {
-    VIEW_INPUT,
-    VIEW_SPECTRUM,
-    VIEW_AUTOCORRELATION,
-    VIEW_VOWEL_PREDICTION,
-    VIEW_COUNT
+    VIEW_INPUT = 0,
+    VIEW_SPECTRUM = 1<<0,
+    VIEW_AUTOCORRELATION = 1<<1,
+    VIEW_VOWEL_PREDICTION = VIEW_SPECTRUM | VIEW_AUTOCORRELATION
 } ViewType;
 
 

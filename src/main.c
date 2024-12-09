@@ -5,6 +5,7 @@
 #include "math_tools.h"
 #include "rendering.h"
 #include "audio_capture.h"
+#include "raw_knn_data.h"
 
 SDL_Window* main_window;
 
@@ -20,6 +21,7 @@ int main_function() {
 
     graphBoundaries boundaries1;
     graphBoundaries boundaries2;
+    graphBoundaries boundaries3;
     Button changeWindowButton;
 
     ViewType currentView = VIEW_INPUT;
@@ -31,6 +33,16 @@ int main_function() {
     float* windowed_data;
     float* precomputed_hamming;
     float* smoothed_spectrum;
+    float* autocorr;
+    int* spectrum_peaks;
+    int* autocorr_peaks;
+    int max_peaks_spectrum = 5;
+    int max_peaks_autocorr = 20;
+
+    float energy = 0.0f;
+    float energy_threshold = 0.1f;
+    char* predicted_label;
+    int vowel_prediction = 0;
 
     data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
     if (data.samples == NULL){
@@ -75,7 +87,61 @@ int main_function() {
         free(precomputed_hamming); // Free previously allocated memory
         return -1;
     } else {
-        memset(smoothed_spectrum, 0, sizeof(float) * data.maxFrameIndex / 2 + 1);
+        memset(smoothed_spectrum, 0, sizeof(float) * (data.maxFrameIndex / 2 + 1));
+    }
+    autocorr = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    if (autocorr == NULL){
+        fprintf(stderr, "Malloc failed for autocorr\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        free(windowed_data); // Free previously allocated memory
+        free(precomputed_hamming); // Free previously allocated memory
+        free(smoothed_spectrum); // Free previously allocated memory
+        return -1;
+    } else {
+        memset(autocorr, 0, sizeof(float) * data.maxFrameIndex);
+    }
+    spectrum_peaks = (int*)malloc(sizeof(int) * max_peaks_spectrum);
+    if (spectrum_peaks == NULL){
+        fprintf(stderr, "Malloc failed for spectrum_peaks\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        free(windowed_data); // Free previously allocated memory
+        free(precomputed_hamming); // Free previously allocated memory
+        free(smoothed_spectrum); // Free previously allocated memory
+        free(autocorr); // Free previously allocated memory
+        return -1;
+    } else {
+        memset(spectrum_peaks, 0, sizeof(int) * max_peaks_spectrum);
+    }
+    autocorr_peaks = (int*)malloc(sizeof(int) * max_peaks_autocorr);
+    if (autocorr_peaks == NULL){
+        fprintf(stderr, "Malloc failed for autocorr_peaks\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        free(windowed_data); // Free previously allocated memory
+        free(precomputed_hamming); // Free previously allocated memory
+        free(smoothed_spectrum); // Free previously allocated memory
+        free(autocorr); // Free previously allocated memory
+        free(spectrum_peaks); // Free previously allocated memory
+        return -1;
+    } else {
+        memset(autocorr_peaks, 0, sizeof(int) * max_peaks_autocorr);
+    }
+    predicted_label = (char*)malloc(sizeof(char) * 2);
+    if (predicted_label == NULL){
+        fprintf(stderr, "Malloc failed for predicted_label\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        free(windowed_data); // Free previously allocated memory
+        free(precomputed_hamming); // Free previously allocated memory
+        free(smoothed_spectrum); // Free previously allocated memory
+        free(autocorr); // Free previously allocated memory
+        free(spectrum_peaks); // Free previously allocated memory
+        free(autocorr_peaks); // Free previously allocated memory
+        return -1;
+    } else {
+        memset(predicted_label, 0, sizeof(char) * 2);
     }
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {
@@ -112,28 +178,34 @@ int main_function() {
 
     pthread_mutex_init(&globalDataLock, NULL);
 
-
     TTF_Font* font;
-    TTF_Font* buttonFont;
+    TTF_Font* titleFont;
     TTF_Font* legendFont;
 
     loopArgs loop_args = {
         &boundaries1,
         &boundaries2,
+        &boundaries3,
         &data,
         orderedData,
         fft_data,
         smoothed_spectrum,
-        &quit,
+        autocorr,
         &globalDataLock,
         currentWindow,
         &changeWindowButton,
         {255, 0, 0, 255},
         {0, 0, 255, 255},
         font,
-        buttonFont,
+        titleFont,
         legendFont,
-        &currentView
+        &currentView,
+        spectrum_peaks,
+        autocorr_peaks,
+        max_peaks_spectrum,
+        max_peaks_autocorr,
+        predicted_label,
+        &vowel_prediction
     };
 
     init(&boundaries1, &boundaries2, &changeWindowButton, &loop_args);
@@ -202,8 +274,29 @@ int main_function() {
             }
         }
         copySamplesInOrder(&data, orderedData);
-        updateFFTData(data.samples, precomputed_hamming, windowed_data, fft_data, spectrum, SAMPLE_COUNT, fft_plan);
-        smoothSpectrum(spectrum, smoothed_spectrum, SAMPLE_COUNT, 10);
+        if (currentView & VIEW_SPECTRUM){
+            updateFFTData(data.samples, precomputed_hamming, windowed_data, fft_data, spectrum, SAMPLE_COUNT, fft_plan);
+            smoothSpectrum(spectrum, smoothed_spectrum, SAMPLE_COUNT, 10);
+            detectPeaks(smoothed_spectrum, SAMPLE_COUNT / 2 + 1, spectrum_peaks, max_peaks_spectrum, 15, 0.0f);
+        }
+        if (currentView & VIEW_AUTOCORRELATION){
+            autocorrelation(orderedData, autocorr, SAMPLE_COUNT);
+            detectPeaks(autocorr, SAMPLE_COUNT, autocorr_peaks, max_peaks_autocorr, 15, 0.0f);
+        }
+        if (currentView & VIEW_VOWEL_PREDICTION){
+            energy = calculate_energy(orderedData, SAMPLE_COUNT);
+            if (energy > energy_threshold) {
+                vowel_prediction = 1;
+                float* formants = calculate_formants(spectrum_peaks, autocorr_peaks, max_peaks_spectrum, max_peaks_autocorr, 2, SAMPLE_RATE, SAMPLE_COUNT);
+                char* result = predict_vowel(formants, 2, 3, training_data, training_labels, 59);
+                printf("Formant 1 : %f, Formant 2 : %f, Predicted label : %s\n", formants[0], formants[1], result);
+                strncpy(predicted_label, result, 2);
+                free(formants);
+            }
+            else {
+                vowel_prediction = 0;
+            }
+        }
         pthread_mutex_lock(&globalDataLock);
         loop(loop_args);
         pthread_mutex_unlock(&globalDataLock);
@@ -222,20 +315,50 @@ int main_function() {
     pthread_mutex_destroy(&globalDataLock);
     fftwf_destroy_plan(fft_plan);
 
-    if (spectrum) free(spectrum);
-    if (fft_data) fftwf_free(fft_data);
-    if (smoothed_spectrum) free(smoothed_spectrum);
-    if (precomputed_hamming) free(precomputed_hamming);
-    if (windowed_data) free(windowed_data);
-    if (orderedData) free(orderedData);
-    if (data.samples) free(data.samples);
+    if (spectrum) {
+        free(spectrum);
+        spectrum = NULL;
+    }
+    if (fft_data) {
+        fftwf_free(fft_data);
+        fft_data = NULL;
+    }
+    if (smoothed_spectrum) {
+        free(smoothed_spectrum);
+        smoothed_spectrum = NULL;
+    }
+    if (precomputed_hamming) {
+        free(precomputed_hamming);
+        precomputed_hamming = NULL;
+    }
+    if (autocorr) {
+        free(autocorr);
+        autocorr = NULL;
+    }
+    if (windowed_data) {
+        free(windowed_data);
+        windowed_data = NULL;
+    }
+    if (orderedData) {
+        free(orderedData);
+        orderedData = NULL;
+    }
+    if (data.samples) {
+        free(data.samples);
+        data.samples = NULL;
+    }
 
     fftwf_cleanup();
 
-    
-    if (font != NULL) TTF_CloseFont(font);
-    if (buttonFont != NULL) TTF_CloseFont(buttonFont);
-    if (legendFont != NULL) TTF_CloseFont(legendFont);
+    if (font != NULL) {
+        TTF_CloseFont(font);
+    }
+    if (titleFont != NULL) {
+        TTF_CloseFont(titleFont);
+    }
+    if (legendFont != NULL) {
+        TTF_CloseFont(legendFont);
+    }
     TTF_Quit();
     SDL_DestroyRenderer(main_renderer);
     SDL_DestroyWindow(main_window);
@@ -252,14 +375,19 @@ pa_error:
     if (fft_data) fftwf_free(fft_data);
     if (smoothed_spectrum) free(smoothed_spectrum);
     if (precomputed_hamming) free(precomputed_hamming);
+    if (autocorr) free(autocorr);
+    if (spectrum_peaks) free(spectrum_peaks);
+    if (autocorr_peaks) free(autocorr_peaks);
     if (windowed_data) free(windowed_data);
     if (orderedData) free(orderedData);
     if (data.samples) free(data.samples);
 
     fftwf_cleanup();
-    TTF_CloseFont(font);
-    TTF_CloseFont(buttonFont);
-    TTF_CloseFont(legendFont);
+
+    
+    if (font != NULL) TTF_CloseFont(font);
+    if (titleFont != NULL) TTF_CloseFont(titleFont);
+    if (legendFont != NULL) TTF_CloseFont(legendFont);
     TTF_Quit();
     SDL_DestroyRenderer(main_renderer);
     SDL_DestroyWindow(main_window);

@@ -31,20 +31,27 @@ typedef struct {
 typedef struct{
     graphBoundaries* boundaries1;
     graphBoundaries* boundaries2;
+    graphBoundaries* boundaries3;
     AudioData* data;
     float* orderedData;
     fftwf_complex* fft_data;
     float* spectrum;
-    int* quit;
+    float* autocorr;
     pthread_mutex_t* globalData;
     int currentWindow; // value is 1 or 2
     Button* changeWindowButton;
     SDL_Color color1;
     SDL_Color color2;
     TTF_Font* font;
-    TTF_Font* buttonFont;
+    TTF_Font* titleFont;
     TTF_Font* legendFont;
     ViewType* currentView;
+    int* spectrum_peaks;
+    int* autocorr_peaks;
+    int max_peaks_spectrum;
+    int max_peaks_autocorr;
+    char* predicted_label;
+    int* vowel_prediction;
 } loopArgs;
 
 void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button, loopArgs* args);

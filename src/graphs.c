@@ -109,7 +109,7 @@ void drawTicks(SDL_Renderer* renderer, graphBoundaries boundaries, TTF_Font* fon
     }
 }
 
-void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font){
+void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, TTF_Font* title_font, char* title){  
     //draw axes
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT);
@@ -117,6 +117,12 @@ void drawBackground(SDL_Renderer* renderer, float* data, int length, graphBounda
     SDL_RenderDrawLine(renderer, MARGIN_WIDTH, MARGIN_HEIGHT, MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
     SDL_RenderDrawLine(renderer, WIDTH - MARGIN_WIDTH, MARGIN_HEIGHT, WIDTH - MARGIN_WIDTH, HEIGHT - MARGIN_HEIGHT);
     drawTicks(renderer, boundaries, font);
+    //draw title
+    //get the width/height of the text
+    int text_width = 0;
+    int text_height = 0;
+    TTF_SizeText(title_font, title, &text_width, &text_height);
+    drawText(renderer, title_font, title, WIDTH/2 - text_width/2, MARGIN_HEIGHT/2 - text_height/2, (SDL_Color){0, 0, 0, 255});
 }
 
 void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* legendy){
@@ -124,7 +130,9 @@ void drawLegend(SDL_Renderer* renderer, TTF_Font* font, char* legendx, char* leg
     drawText(renderer, font, legendy, MARGIN_WIDTH - 50, MARGIN_HEIGHT - 20, (SDL_Color){0, 0, 0, 255});
 }
 
-void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries){
+void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, SDL_Color line_color){
+    //set the right color
+    SDL_SetRenderDrawColor(renderer, line_color.r, line_color.g, line_color.b, line_color.a);
     // graphs the inputted data.
     // we draw a line between each pair of adjacent points
     float point1[2]; // store the current first point
@@ -155,8 +163,24 @@ void drawCurve(SDL_Renderer* renderer, float* data, int length, graphBoundaries 
     }
 }
 
-void drawGraph(SDL_Renderer* renderer, float* data, int length, graphBoundaries boundaries, TTF_Font* font, TTF_Font* legend_font, char* legendx, char* legendy){
-    drawBackground(renderer, data, length, boundaries, font);
+void drawGraph(SDL_Renderer* renderer, float* data, SDL_Color line_color, int length, graphBoundaries boundaries, TTF_Font* font, TTF_Font* title_font, TTF_Font* legend_font, char* legendx, char* legendy, char* title){
+    drawBackground(renderer, data, length, boundaries, font, title_font, title);
     drawLegend(renderer, legend_font, legendx, legendy);
-    drawCurve(renderer, data, length, boundaries);
+    drawCurve(renderer, data, length, boundaries, line_color);
+}
+
+void drawPeaks(SDL_Renderer* renderer, int* peaks, int peak_count, float* data, int data_size, graphBoundaries boundaries, SDL_Color peak_color){
+    SDL_SetRenderDrawColor(renderer, peak_color.r, peak_color.g, peak_color.b, peak_color.a);
+    for (int i = 0; i < peak_count; i++) {
+        if (peaks[i] == -1) break;
+        float x_val = boundaries.xInterval.min + (peaks[i]+1) * (boundaries.xInterval.max - boundaries.xInterval.min) / data_size;
+        float base_coords[2] = {x_val, 0};
+        float peak_coords[2] = {x_val, data[peaks[i]]};
+        getCoords(peak_coords, boundaries);
+        getCoords(base_coords, boundaries);
+        int x = (int) peak_coords[0];
+        int y = (int) peak_coords[1];
+        SDL_RenderDrawLine(renderer, x, base_coords[1], x, y);
+        SDL_RenderDrawPoint(renderer, x, y);
+    }
 }
