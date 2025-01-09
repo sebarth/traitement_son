@@ -115,7 +115,8 @@ void render_view(SDL_Renderer* renderer, SDL_Color line_color, float* data, int 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    drawGraph(renderer, data, line_color, data_count, *bounds, font, titleFont, legendFont, xLabel, yLabel, title);
+    drawGraph(renderer, data, line_color, data_count, *bounds, font, titleFont, legendFont,
+            xLabel, yLabel, title);
 
     if (withPeaks){
         drawPeaks(renderer, peaks, peak_count, data, data_count, *bounds, (SDL_Color){0, 0, 0, 255});
@@ -125,22 +126,31 @@ void render_view(SDL_Renderer* renderer, SDL_Color line_color, float* data, int 
 }
 
 void input_view(loopArgs args) {
-    float max = fmax(dataMax(args.orderedData, SAMPLE_COUNT), -dataMin(args.orderedData, SAMPLE_COUNT));
+    float max = fmax(dataMax(args.orderedData, SAMPLE_COUNT), -dataMin(args.orderedData,
+                            SAMPLE_COUNT));
     (args.boundaries1)->yInterval.max = fmax(max, 0.1f);
     (args.boundaries1)->yInterval.min = fmin(-max, -0.1f);
 
-    render_view(main_renderer, (SDL_Color){0, 0, 255, 0}, args.orderedData, SAMPLE_COUNT, args.boundaries1, args.font, args.titleFont, args.legendFont, "Temps (ms)", "Amplitude", "Signal audio", 0, NULL, 0);
+    render_view(main_renderer, (SDL_Color){0, 0, 255, 0}, args.orderedData, SAMPLE_COUNT,
+                args.boundaries1, args.font, args.titleFont, args.legendFont, "Temps (ms)",
+                "Amplitude", "Signal audio", 0, NULL, 0);
 }
 
 void spectrum_view(loopArgs args) {
     (args.boundaries2)->yInterval.max = fmax(dataMax(args.spectrum, SAMPLE_COUNT / 2 + 1), 0.01f);
-    render_view(main_renderer, (SDL_Color){255, 0, 0, 0}, args.spectrum, SAMPLE_COUNT / 2 + 1, args.boundaries2, args.font, args.titleFont, args.legendFont, "Fréquence (Hz)", "Amplitude", "Spectre de Fourier", 1, args.spectrum_peaks, args.max_peaks_spectrum);
+    render_view(main_renderer, (SDL_Color){255, 0, 0, 0}, args.spectrum,
+                SAMPLE_COUNT / 2 + 1, args.boundaries2, args.font, args.titleFont,
+                args.legendFont, "Fréquence (Hz)", "Amplitude", "Spectre de Fourier", 1,
+                args.spectrum_peaks, args.max_peaks_spectrum);
 }
 
 void autocorrelation_view(loopArgs args){
     (args.boundaries3)->yInterval.max = fmax(dataMax(args.autocorr, SAMPLE_COUNT), 0.01f);
     (args.boundaries3)->yInterval.min = fmin(dataMin(args.autocorr, SAMPLE_COUNT), -0.01f);
-    render_view(main_renderer, (SDL_Color){0, 255, 0, 0}, args.autocorr, SAMPLE_COUNT, args.boundaries3, args.font, args.titleFont, args.legendFont, "Retard (ms)", "Amplitude", "Autocorrélation", 1, args.autocorr_peaks, args.max_peaks_autocorr);
+    render_view(main_renderer, (SDL_Color){0, 255, 0, 0}, args.autocorr,
+                SAMPLE_COUNT, args.boundaries3, args.font, args.titleFont, args.legendFont,
+                "Retard (ms)", "Amplitude", "Autocorrélation", 1,
+                args.autocorr_peaks, args.max_peaks_autocorr);
 }
 
 void vowel_prediction_view(loopArgs args){
@@ -157,7 +167,8 @@ void vowel_prediction_view(loopArgs args){
     int width = 0;
     int height = 0;
     TTF_SizeText(args.titleFont, string, &width, &height);
-    drawText(main_renderer, args.titleFont, string, (WIDTH - width) / 2, (HEIGHT - height) / 2, (SDL_Color){0, 0, 0, 255});
+    drawText(main_renderer, args.titleFont, string, (WIDTH - width) / 2,
+            (HEIGHT - height) / 2, (SDL_Color){0, 0, 0, 255});
     
     SDL_RenderPresent(main_renderer);
 }

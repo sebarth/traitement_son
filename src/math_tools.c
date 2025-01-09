@@ -182,8 +182,13 @@ float calculate_energy(float* data, int size){
 
 float* calculate_formants(int* spectrum_peaks, int* autocorr_peaks, int max_peaks_spectrum, int max_peaks_autocorr, int num_formants, int sample_rate, int sample_count){
     float* formants = (float*)malloc(num_formants * sizeof(float));
+    if (formants == NULL){
+        fprintf(stderr, "Malloc failed for formants\n");
+        return NULL;
+    }
+    float fft_resolution = (float) sample_rate / (float) sample_count; 
     for (int i = 0; i < num_formants; i++){
-        formants[i] = 0.0f;
+        formants[i] = -1.0f;
     }
 
     int count = 0;
@@ -192,7 +197,7 @@ float* calculate_formants(int* spectrum_peaks, int* autocorr_peaks, int max_peak
         if (spectrum_peaks[i] == -1) break;
         for (int j = 0; j < max_peaks_autocorr; j++){
             if (autocorr_peaks[j] == -1) break;
-            if (fabsf((float) spectrum_peaks[i] - (float) sample_rate / (float) autocorr_peaks[j]) < 1.0f){
+            if (fabsf((float) spectrum_peaks[i] - (float) sample_rate / (float) autocorr_peaks[j]) < 2.0f * fft_resolution){
                 is_formant = 0;
                 break;
             }
@@ -203,4 +208,19 @@ float* calculate_formants(int* spectrum_peaks, int* autocorr_peaks, int max_peak
         }
     }
     return formants;
+}
+
+void cepstrum(float* data, float* cepstrum, int size){
+    fftwf_complex* fft_data = fftwf_malloc(size * sizeof(fftwf_complex));
+    fftwf_plan plan = fftwf_plan_dft_r2c_1d(size, data, fft_data, FFTW_ESTIMATE);
+    fftwf_execute(plan);
+    for (int i = 0; i < size; i++){
+        fft_data[i][0] = logf(1 + fft_data[i][0] * fft_data[i][0] + fft_data[i][1] * fft_data[i][1]);
+        fft_data[i][1] = 0.0f;
+    }
+    fftwf_plan inverse_plan = fftwf_plan_dft_c2r_1d(size, fft_data, cepstrum, FFTW_ESTIMATE);
+    fftwf_execute(inverse_plan);
+    fftwf_destroy_plan(plan);
+    fftwf_destroy_plan(inverse_plan);
+    fftwf_free(fft_data);
 }

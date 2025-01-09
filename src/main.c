@@ -283,7 +283,7 @@ int main_function() {
             autocorrelation(orderedData, autocorr, SAMPLE_COUNT);
             detectPeaks(autocorr, SAMPLE_COUNT, autocorr_peaks, max_peaks_autocorr, 15, 0.0f);
         }
-        if (currentView & VIEW_VOWEL_PREDICTION){
+        if (currentView == VIEW_VOWEL_PREDICTION){
             energy = calculate_energy(orderedData, SAMPLE_COUNT);
             if (energy > energy_threshold) {
                 vowel_prediction = 1;
