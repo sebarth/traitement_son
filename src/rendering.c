@@ -38,7 +38,7 @@ void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* ch
     boundaries2->xInterval.min = 0.0f;
     
     //Nyquist frequency
-    boundaries2->xInterval.max = SAMPLE_RATE / 2.0f;
+    boundaries2->xInterval.max = F_MAX;
     boundaries2->yInterval.min = 0.0f;
     boundaries2->yInterval.max = 1.0f;
     
@@ -137,10 +137,22 @@ void input_view(loopArgs args) {
 }
 
 void spectrum_view(loopArgs args) {
-    (args.boundaries2)->yInterval.max = fmax(dataMax(args.spectrum, SAMPLE_COUNT / 2 + 1), 0.01f);
+    float data_max = dataMax(args.spectrum, MAX_INDEX);
+    float data_min = dataMin(args.spectrum, MAX_INDEX);
+    float max_height = (args.current_params->using_decibel) ? 0.0f : 0.01f;
+    float min_height = (args.current_params->using_decibel) ? -60.0f : 0.0f;
+    (args.boundaries2)->yInterval.max = fmax(data_max, max_height);
+    (args.boundaries2)->yInterval.min = fmin(data_min, min_height);
+    char amplitude_name[32];
+    if (args.current_params->using_decibel) {
+        snprintf(amplitude_name, sizeof(amplitude_name), "Amplitude (dB)");
+    } else {
+        snprintf(amplitude_name, sizeof(amplitude_name), "Amplitude (unité arbitraire)");
+    }
+    
     render_view(main_renderer, (SDL_Color){255, 0, 0, 0}, args.spectrum,
-                SAMPLE_COUNT / 2 + 1, args.boundaries2, args.font, args.titleFont,
-                args.legendFont, "Fréquence (Hz)", "Amplitude", "Spectre de Fourier", 1,
+                MAX_INDEX, args.boundaries2, args.font, args.titleFont,
+                args.legendFont, "Fréquence (Hz)", amplitude_name, "Spectre de Fourier", 1,
                 args.spectrum_peaks, args.max_peaks_spectrum);
 }
 
@@ -158,7 +170,7 @@ void vowel_prediction_view(loopArgs args){
     SDL_RenderClear(main_renderer);
     //prediction of the vowel
     char string[32];
-    if (*args.vowel_prediction) {
+    if (args.current_params->vowel_prediction) {
         snprintf(string, sizeof(string), "La voyelle prédite est : %c", args.predicted_label[0]);
     } else{
         snprintf(string, sizeof(string), "Je ne repère pas de voyelle.");

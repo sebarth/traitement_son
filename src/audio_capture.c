@@ -34,12 +34,7 @@ int customAudioCallback(const void *inputBuffer, void *outputBuffer,
         for (unsigned long i = 0; i < framesPerBuffer; i++) {
             pthread_mutex_lock(&globalDataLock);
             // store the samples in the circular buffer
-            if (*in > NOISE_FLOOR || *in < -NOISE_FLOOR) {
-                data->samples[data->currentIndex] = *in++;
-            } else{
-                data->samples[data->currentIndex] = 0;
-                in++;
-            }
+            data->samples[data->currentIndex] = *in++;
             // update the index
             data->currentIndex = (data->currentIndex + 1) % data->maxFrameIndex;
             pthread_mutex_unlock(&globalDataLock);

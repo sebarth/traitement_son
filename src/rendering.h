@@ -51,7 +51,7 @@ typedef struct{
     int max_peaks_spectrum;
     int max_peaks_autocorr;
     char* predicted_label;
-    int* vowel_prediction;
+    struct Params *current_params;
 } loopArgs;
 
 void init(graphBoundaries* boundaries1, graphBoundaries* boundaries2, Button* button, loopArgs* args);

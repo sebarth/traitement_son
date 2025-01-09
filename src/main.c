@@ -31,6 +31,7 @@ int main_function() {
     data.currentIndex = 0;
     float* orderedData;
     float* windowed_data;
+    float* pre_emphasized_data;
     float* precomputed_hamming;
     float* smoothed_spectrum;
     float* autocorr;
@@ -42,7 +43,8 @@ int main_function() {
     float energy = 0.0f;
     float energy_threshold = 0.1f;
     char* predicted_label;
-    int vowel_prediction = 0;
+    
+    struct Params current_params = {0, 1, 1};
 
     data.samples = (float*)malloc(sizeof(float) * data.maxFrameIndex);
     if (data.samples == NULL){
@@ -67,6 +69,16 @@ int main_function() {
         return -1;
     } else {
         memset(windowed_data, 0, sizeof(float) * data.maxFrameIndex);
+    }
+    pre_emphasized_data = (float*)malloc(sizeof(float) * data.maxFrameIndex);
+    if (pre_emphasized_data == NULL){
+        fprintf(stderr, "Malloc failed for pre_emphasized_data\n");
+        free(data.samples); // Free previously allocated memory
+        free(orderedData); // Free previously allocated memory
+        free(windowed_data); // Free previously allocated memory
+        return -1;
+    } else {
+        memset(pre_emphasized_data, 0, sizeof(float) * data.maxFrameIndex);
     }
     precomputed_hamming = (float*)malloc(sizeof(float) * data.maxFrameIndex);
     if (precomputed_hamming == NULL){
@@ -170,7 +182,7 @@ int main_function() {
         memset(spectrum, 0, SAMPLE_COUNT * sizeof(float));
     }
 
-    fft_init(SAMPLE_COUNT, windowed_data, fft_data, "fftw_wisdom.txt", &fft_plan);
+    fft_init(SAMPLE_COUNT, pre_emphasized_data, fft_data, "fftw_wisdom.txt", &fft_plan);
 
     int quit = 0;
     int currentWindow = 1;
@@ -205,7 +217,7 @@ int main_function() {
         max_peaks_spectrum,
         max_peaks_autocorr,
         predicted_label,
-        &vowel_prediction
+        &current_params
     };
 
     init(&boundaries1, &boundaries2, &changeWindowButton, &loop_args);
@@ -269,13 +281,21 @@ int main_function() {
                     case SDLK_2: changeView(loop_args, VIEW_SPECTRUM); break;
                     case SDLK_3: changeView(loop_args, VIEW_AUTOCORRELATION); break;
                     case SDLK_4: changeView(loop_args, VIEW_VOWEL_PREDICTION); break;
+                    case SDLK_d: current_params.using_decibel = !current_params.using_decibel; break;
+                    case SDLK_e: current_params.use_pre_emphasis = !current_params.use_pre_emphasis; break;
                     default: break; // Handle unrecognized input if necessary
                 }
             }
         }
         copySamplesInOrder(&data, orderedData);
         if (currentView & VIEW_SPECTRUM){
-            updateFFTData(data.samples, precomputed_hamming, windowed_data, fft_data, spectrum, SAMPLE_COUNT, fft_plan);
+            windowing(orderedData, windowed_data, SAMPLE_COUNT, precomputed_hamming);
+            if (current_params.use_pre_emphasis) {
+                pre_emphasis(windowed_data, pre_emphasized_data, SAMPLE_COUNT, 0.95f);
+            } else {
+                memcpy(pre_emphasized_data, windowed_data, SAMPLE_COUNT * sizeof(float));
+            }
+            updateFFTData(data.samples, pre_emphasized_data, fft_data, spectrum, SAMPLE_COUNT, fft_plan, current_params.using_decibel);
             smoothSpectrum(spectrum, smoothed_spectrum, SAMPLE_COUNT, 10);
             detectPeaks(smoothed_spectrum, SAMPLE_COUNT / 2 + 1, spectrum_peaks, max_peaks_spectrum, 15, 0.0f);
         }
@@ -286,7 +306,7 @@ int main_function() {
         if (currentView == VIEW_VOWEL_PREDICTION){
             energy = calculate_energy(orderedData, SAMPLE_COUNT);
             if (energy > energy_threshold) {
-                vowel_prediction = 1;
+                current_params.vowel_prediction = 1;
                 float* formants = calculate_formants(spectrum_peaks, autocorr_peaks, max_peaks_spectrum, max_peaks_autocorr, 2, SAMPLE_RATE, SAMPLE_COUNT);
                 char* result = predict_vowel(formants, 2, 3, training_data, training_labels, 59);
                 printf("Formant 1 : %f, Formant 2 : %f, Predicted label : %s\n", formants[0], formants[1], result);
@@ -294,7 +314,7 @@ int main_function() {
                 free(formants);
             }
             else {
-                vowel_prediction = 0;
+                current_params.vowel_prediction = 0;
             }
         }
         pthread_mutex_lock(&globalDataLock);
@@ -342,6 +362,10 @@ int main_function() {
     if (orderedData) {
         free(orderedData);
         orderedData = NULL;
+    }
+    if (pre_emphasized_data) {
+        free(pre_emphasized_data);
+        pre_emphasized_data = NULL;
     }
     if (data.samples) {
         free(data.samples);

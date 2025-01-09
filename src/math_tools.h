@@ -7,7 +7,7 @@
 extern fftwf_plan fft_plan;
 
 void fft_init(int size, float* in, fftwf_complex* out, char* file, fftwf_plan* plan);
-void updateFFTData(float* data, float* hamming, float* windowed_data, fftwf_complex* fft_data, float* spectrum, int size, fftwf_plan plan);
+void updateFFTData(float* data, float* windowed_data, fftwf_complex* fft_data, float* spectrum, int size, fftwf_plan plan, int use_decibel);
 void smoothSpectrum(float* spectrum, float* smoothed, int size, int window_size);
 void autocorrelation(float* data, float* autocorr, int size);
 
@@ -94,4 +94,19 @@ float calculate_energy(float* data, int size);
  */
 float* calculate_formants(int* spectrum_peaks, int* autocorr_peaks, int max_peaks_spectrum, int max_peaks_autocorr, int num_formants, int sample_rate, int sample_count);
 
+
+/**
+ * @brief Applies a pre-emphasis filter to the input data.
+ *
+ * This function applies a pre-emphasis filter to the input data array. The pre-emphasis filter
+ * is typically used in audio processing to amplify the high-frequency components of the signal.
+ *
+ * @param data Pointer to the input data array.
+ * @param pre_emphasized_data Pointer to the output array where the pre-emphasized data will be stored.
+ * @param size The number of elements in the input data array.
+ * @param alpha The pre-emphasis coefficient. A typical value is 0.97.
+ */
+void pre_emphasis(float* data, float* pre_emphasized_data, int size, float alpha);
+
+void windowing(float* data, float* windowed_data, int size, float* window);
 #endif // MATH_TOOLS_H
